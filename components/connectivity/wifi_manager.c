@@ -17,10 +17,17 @@ static const char *TAG = "wifi_mgr";
 static EventGroupHandle_t s_wifi_events;
 static TimerHandle_t s_reconnect_timer;
 static int s_retry;
+static bool s_reconnect_enabled = true;
 
 static void reconnect_timer_cb(TimerHandle_t timer)
 {
     (void)timer;
+
+    if (!s_reconnect_enabled) {
+        ESP_LOGI(TAG, "Wi-Fi reconnect disabled; skipping reconnect");
+        return;
+    }
+
     esp_wifi_connect();
 }
 
@@ -36,6 +43,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
 {
     (void)arg;
     (void)data;
+    
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -92,7 +100,19 @@ esp_err_t wifi_manager_start(void)
     return esp_wifi_start();
 }
 
+esp_err_t wifi_manager_stop(void)
+{
+    // TODO: handle errors
+    (void)esp_wifi_disconnect();
+    return esp_wifi_stop();
+}
+
 void wifi_manager_get_mac(uint8_t mac[6])
 {
     esp_wifi_get_mac(WIFI_IF_STA, mac);
+}
+
+void wifi_manager_set_reconnect_enabled(bool enabled)
+{
+    s_reconnect_enabled = enabled;
 }
