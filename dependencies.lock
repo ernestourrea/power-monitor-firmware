@@ -41,6 +41,6 @@ direct_dependencies:
 - espressif/network_provisioning
 - espressif/qrcode
 - idf
-manifest_hash: 07ae1f08bf8a2c4d4373904e11ff3c7b03b7a36ed2b6bc4492868fccb892c039
+manifest_hash: 60bb56dffb6e4c1736eed6b4d2b04b07bb40a705fde2301f8a78e9d0275cc21b
 target: esp32s3
 version: 2.0.0

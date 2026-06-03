@@ -14,5 +14,7 @@
     "--background-index",
     "--query-driver=**",
     "--compile-commands-dir=c:\\power-monitor\\power-monitor-firmware\\power-monitor-firmware\\build"
-  ]
+  ],
+  "idf.flashType": "UART",
+  "idf.portWin": "COM12"
 }
