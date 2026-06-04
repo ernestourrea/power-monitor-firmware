@@ -1,0 +1,15 @@
+idf_component_register(
+    SRCS 
+        "io_manager.c"
+        "led_indicator.c"
+        "button_input.c"
+    INCLUDE_DIRS 
+        "include"
+    REQUIRES
+        board
+        connectivity
+        driver
+        esp_timer
+        led_strip
+        common
+)

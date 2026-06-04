@@ -21,17 +21,29 @@ static const board_config_t s_board = {
 // Initialize the board configuration, set up GPIOs, etc.
 esp_err_t board_config_init(void)
 {
+    /* Output configuration */
     gpio_config_t output_cfg = {
-        .pin_bit_mask = (1ULL << s_board.relay_gpio), // | (1ULL << s_board.status_led_gpio),
+        .pin_bit_mask = (1ULL << s_board.relay_gpio) | (1ULL << s_board.status_led_gpio),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
     };
     ESP_ERROR_CHECK(gpio_config(&output_cfg));
+
+    /* Button configuration */
+    gpio_config_t input_cfg = {
+        .pin_bit_mask = (1ULL << s_board.provisioning_button_gpio),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_ANYEDGE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&input_cfg));
+    
     gpio_set_level(s_board.relay_gpio, 0);
-    // TODO: Add LED and ADC initialization as needed
-    // gpio_set_level(s_board.status_led_gpio, 0);
+    gpio_set_level(s_board.status_led_gpio, 0);
+    // TODO: Add ADC initialization as needed
     return ESP_OK;
 }
 
