@@ -1,4 +1,4 @@
-// connectivity/include/ble_provisioning.h
+// components/connectivity/include/ble_provisioning.h
 
 #ifndef BLE_PROVISIONING_H
 #define BLE_PROVISIONING_H

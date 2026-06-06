@@ -4,8 +4,7 @@
 #include "esp_event.h"
 
 // Custom components
-#include "ble_provisioning.h"
-#include "wifi_manager.h"
+#include "connectivity.h"
 #include "board_config.h"
 #include "io_manager.h"
 
@@ -27,11 +26,10 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(board_config_init());
     ESP_ERROR_CHECK(io_manager_init());
-    ESP_ERROR_CHECK(ble_provisioning_init());
-    ESP_ERROR_CHECK(wifi_manager_init());
+    ESP_ERROR_CHECK(connectivity_init());
 
     ESP_ERROR_CHECK(io_manager_start());
-    ESP_ERROR_CHECK(wifi_manager_start());
+    ESP_ERROR_CHECK(connectivity_start());
 
     ESP_LOGI(TAG, "smart contact firmware started");
 }

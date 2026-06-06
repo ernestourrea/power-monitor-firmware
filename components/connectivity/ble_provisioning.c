@@ -1,16 +1,16 @@
-// connectivity/ble_provisioning.c
+// components/connectivity/ble_provisioning.c
 
 #include "ble_provisioning.h"
 #include "ble_prov_security.h"
-#include "esp_log.h"
-#include "esp_check.h"
-#include "wifi_manager.h"
-
-#include <network_provisioning/manager.h>
-#include <network_provisioning/scheme_ble.h>
 
 #include <stdbool.h>
 #include <string.h>
+#include "esp_log.h"
+#include "esp_check.h"
+#include <network_provisioning/manager.h>
+#include <network_provisioning/scheme_ble.h>
+
+#include "connectivity.h"
 
 static const char *TAG = "ble_prov";
 
@@ -24,8 +24,10 @@ static esp_err_t ble_provisioning_start_service(void);
 static esp_err_t ble_provisioning_ensure_mgr_initialized(void);
 
 /* Event handler for catching system events */
-static void ble_provisioning_event_handler(void *arg, esp_event_base_t event_base,
-                                           int32_t event_id, void *event_data)
+static void ble_provisioning_event_handler(void *arg, 
+                                           esp_event_base_t event_base,
+                                           int32_t event_id, 
+                                           void *event_data )
 {
     (void)arg;
 
@@ -33,6 +35,7 @@ static void ble_provisioning_event_handler(void *arg, esp_event_base_t event_bas
         switch (event_id) {
         case NETWORK_PROV_START:
             ESP_LOGI(TAG, "Provisioning started");
+            connectivity_post_event(CONN_EVT_PROVISIONING_STARTED, 0);
             s_provisioning_active = true;
             break;
         case NETWORK_PROV_WIFI_CRED_RECV: {
@@ -49,25 +52,20 @@ static void ble_provisioning_event_handler(void *arg, esp_event_base_t event_bas
                      "\n\tPlease check SSID/password and retry provisioning",
                      (*reason == NETWORK_PROV_WIFI_STA_AUTH_ERROR) ?
                      "Wi-Fi station authentication failed" : "Wi-Fi access-point not found");
-            /* Reset the state machine on provisioning failure.
-             * This is enabled by the CONFIG_EXAMPLE_RESET_PROV_MGR_ON_FAILURE configuration.
-             * It allows the provisioning manager to retry the provisioning process
-             * based on the number of attempts specified in wifi_conn_attempts. After attempting
-             * the maximum number of retries, the provisioning manager will reset the state machine
-             * and the provisioning process will be terminated.
-             */
+            connectivity_post_event(CONN_EVT_PROVISIONING_FAILED, *reason);
+            // Reset the state machine on provisioning failure.
             network_prov_mgr_reset_wifi_sm_state_on_failure();
             break;
         }
         case NETWORK_PROV_WIFI_CRED_SUCCESS:
             ESP_LOGI(TAG, "Provisioning successful");
+            connectivity_post_event(CONN_EVT_PROVISIONING_SUCCESS, 0);
             s_is_provisioned = true;
-            wifi_manager_set_reconnect_enabled(true);
             break;
         case NETWORK_PROV_END:
             ESP_LOGI(TAG, "Provisioning ended");
+            connectivity_post_event(CONN_EVT_PROVISIONING_STOPPED, 0);
             s_provisioning_active = false;
-            wifi_manager_set_reconnect_enabled(true);
             esp_err_t err = network_prov_mgr_deinit();
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to de-initialize provisioning manager: %s", esp_err_to_name(err));
@@ -103,17 +101,6 @@ static void ble_provisioning_event_handler(void *arg, esp_event_base_t event_bas
             break;
         }
     }
-}
-
-// TODO: Move this function to a wifi utility file as it can be used by other components as well
-/* Function to generate a unique service name for the device based on its MAC address */
-static void get_device_service_name(char *service_name, size_t max)
-{
-    uint8_t eth_mac[6];
-    const char *ssid_prefix = "PROV_";
-    wifi_manager_get_mac(eth_mac);
-    snprintf(service_name, max, "%s%02X%02X%02X",
-             ssid_prefix, eth_mac[3], eth_mac[4], eth_mac[5]);
 }
 
 /* Handler for the optional provisioning endpoint registered by the application.
@@ -210,7 +197,7 @@ static esp_err_t ble_provisioning_start_service(void)
     ESP_LOGI(TAG, "Starting BLE provisioning");
 
     char service_name[12];
-    get_device_service_name(service_name, sizeof(service_name));
+    connectivity_get_device_service_name(service_name, sizeof(service_name));
 
     network_prov_security_t security = NETWORK_PROV_SECURITY_2;
     /* The username must be the same one, which has been used in the generation of salt and verifier */
@@ -279,26 +266,19 @@ esp_err_t ble_provisioning_reprovision(void)
 
     ESP_RETURN_ON_ERROR(ble_provisioning_ensure_mgr_initialized(), TAG, "Provisioning manager init failed");
 
-    if (s_provisioning_active) {
-        ESP_LOGW(TAG, "Provisioning is already active");
-        return ESP_OK;
-    }
-
-    wifi_manager_set_reconnect_enabled(false);
-
-    (void)wifi_manager_stop();
-
     ESP_RETURN_ON_ERROR(network_prov_mgr_reset_wifi_provisioning(), TAG, "Failed to reset Wi-Fi provisioning");
     s_is_provisioned = false;
 
     return ble_provisioning_start_service();
 }
 
+// TODO: Remove if not needed
 bool ble_provisioning_is_active(void)
 {
     return s_provisioning_active;
 }
 
+// TODO: Remove if not needed
 bool ble_provisioning_is_provisioned(void)
 {
     return s_is_provisioned;

@@ -1,3 +1,5 @@
+// components/common/include/common_types.h
+
 #ifndef COMMON_TYPES_H
 #define COMMON_TYPES_H
 
@@ -17,6 +19,7 @@ typedef enum {
     TASK_PRIORITY_LED = 3,
     TASK_PRIORITY_BUTTON = 4,
     TASK_PRIORITY_BLE = 4,
+    TASK_PRIORITY_CONNECTIVITY = 5,
     TASK_PRIORITY_WIFI = 5,
     TASK_PRIORITY_MQTT = 5,
     TASK_PRIORITY_FAULT = 7,
