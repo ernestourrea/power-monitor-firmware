@@ -427,8 +427,6 @@ esp_err_t telemetry_init(void)
     }
 
     ESP_ERROR_CHECK(mqtt_manager_init());
-    // TODO: What does this do?: avoids circular dependencies, implement later
-    // ESP_ERROR_CHECK(mqtt_manager_register_event_callback(mqtt_manager_event_cb, NULL));
 
     return ESP_OK;
 }
@@ -452,7 +450,6 @@ esp_err_t telemetry_start(void)
         &s_task_handle
     );
 
-    //return telemetry_post_event(TELEMETRY_EVT_START, 0);
     return ok == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
 }
 

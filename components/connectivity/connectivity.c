@@ -235,9 +235,6 @@ static void connectivity_transition(connectivity_event_t event, int32_t reason)
         switch (event) {
             case CONN_EVT_BACKOFF_EXPIRED:
                 (void)wifi_manager_attempt_reconnect();
-            //    set_state(CONN_STATE_WIFI_STARTING);
-            //    wifi_manager_start();
-            //    set_state(CONN_STATE_WIFI_CONNECTING);
                 break;
             case CONN_EVT_WIFI_DISCONNECTED:
                 start_backoff();

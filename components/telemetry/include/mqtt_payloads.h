@@ -17,7 +17,6 @@
 //esp_err_t mqtt_payload_build_fault_flags(uint32_t flags, char *out, size_t out_len);
 //esp_err_t mqtt_payload_build_response(const char *command_id, const char *status, const char *result, char *out, size_t out_len);
 esp_err_t mqtt_payload_parse_command(const char *data, size_t len, app_event_t *out_event);
-//esp_err_t mqtt_payload_parse_config(const char *data, size_t len, app_event_t *out_event);
 esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_event_t *out_event);
 esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t len, app_event_t *out_event);
 

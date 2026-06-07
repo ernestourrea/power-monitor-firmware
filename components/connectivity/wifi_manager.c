@@ -29,14 +29,6 @@ esp_err_t wifi_manager_attempt_reconnect(void)
     return ESP_OK;
 }
 
-/*
-static void post_app_event(app_event_id_t id)
-{
-    app_event_t event = { .id = id };
-    (void)app_core_post_event(&event, 0);
-}
-*/
-
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     (void)arg;
@@ -48,13 +40,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t *disc = (wifi_event_sta_disconnected_t *)data;
         connectivity_post_event(CONN_EVT_WIFI_DISCONNECTED, disc ? disc->reason : 0);
-        // TODO: move to connectivity component
-        //post_app_event(APP_EVENT_WIFI_DISCONNECTED);
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *) data;
         connectivity_post_event(CONN_EVT_WIFI_CONNECTED, 0);
         ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
-        //post_app_event(APP_EVENT_WIFI_CONNECTED);
     }
 }
 
@@ -85,10 +74,7 @@ esp_err_t wifi_manager_start(void)
     if (wifi_config.sta.ssid[0] == '\0') {
         ESP_LOGW(TAG, "no WiFi credentials; starting provisioning");
         connectivity_post_event(CONN_EVT_NO_CREDENTIALS, 0);
-        // app_event_t event = { .id = APP_EVENT_WIFI_DISCONNECTED };
-        // app_core_post_event(&event, 0);
         return ESP_OK;
-        // return ble_provisioning_start();
     }
 
     connectivity_post_event(CONN_EVT_CREDENTIALS_FOUND, 0);

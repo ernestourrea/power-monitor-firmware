@@ -67,6 +67,7 @@ esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_
         return ESP_ERR_INVALID_ARG;
     }
 
+    // Update stored and cached config
     smart_contact_config_t config;
     config_store_get_cached(&config);
     config.overpower_limit_w = overpower_limit_w;
@@ -94,11 +95,13 @@ esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t le
     errno = 0;
     unsigned long period_s = strtoul(data, &endptr, 10);
 
+    // Ensure data was converted
     if (errno != 0 || endptr == data || period_s > UINT32_MAX)
     {
         return ESP_ERR_INVALID_ARG;
     }
 
+    // Check for trailing, non-space characters
     while (endptr < data + len && isspace((unsigned char)*endptr))
     {
         ++endptr;
@@ -109,6 +112,7 @@ esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t le
         return ESP_ERR_INVALID_ARG;
     }
 
+    // Update stored and cached config
     smart_contact_config_t config;
     config_store_get_cached(&config);
     config.report_interval_s = (uint32_t)period_s;

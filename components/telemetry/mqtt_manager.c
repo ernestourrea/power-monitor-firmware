@@ -31,8 +31,6 @@ static bool s_connected;
 static uint32_t s_telemetry_delay_ms;
 static bool s_client_started;
 static TaskHandle_t s_publish_task_handle;
-// static mqtt_manager_event_cb_t s_event_cb;
-// static void *s_event_cb_ctx;
 
 // Certificate for MQTT broker.
 extern const uint8_t mqtt_certificate_pem_start[]   asm("_binary_mqtt_certificate_pem_start");
@@ -48,15 +46,6 @@ static void update_telemetry_period(void)
         s_telemetry_delay_ms = 1000;
     }
 }
-
-/*
-static void notify_event(mqtt_manager_event_t event, int32_t reason)
-{
-    if (s_event_cb) {
-        s_event_cb(event, reason, s_event_cb_ctx);
-    }
-}
-*/
 
 static void subscribe_topics(void)
 {
@@ -140,16 +129,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         subscribe_topics();
         //(void)publish_fault_flags(fault_manager_get_active_flags());
         telemetry_post_event(TELEMETRY_EVT_MQTT_CONNECTED, 0);
-        //notify_event(MQTT_MANAGER_EVENT_CONNECTED, 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
         s_connected = false;
         telemetry_post_event(TELEMETRY_EVT_MQTT_DISCONNECTED, 0);
-        //notify_event(MQTT_MANAGER_EVENT_DISCONNECTED, 0);
         break;
     case MQTT_EVENT_ERROR:
         telemetry_post_event(TELEMETRY_EVT_MQTT_ERROR, 0);
-        //notify_event(MQTT_MANAGER_EVENT_ERROR, 0);
         break;
     case MQTT_EVENT_DATA:
         handle_data_event(event);
@@ -244,15 +230,6 @@ esp_err_t mqtt_manager_init(void)
 
     return ESP_OK;
 }
-
-/*
-esp_err_t mqtt_manager_register_event_callback(mqtt_manager_event_cb_t cb, void *ctx)
-{
-    s_event_cb = cb;
-    s_event_cb_ctx = ctx;
-    return ESP_OK;
-}
-*/
 
 esp_err_t mqtt_manager_start_client(void)
 {
