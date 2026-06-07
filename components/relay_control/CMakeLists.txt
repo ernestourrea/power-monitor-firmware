@@ -1,0 +1,12 @@
+idf_component_register(
+    SRCS 
+        "relay_control.c"
+        "relay_driver.c"
+    INCLUDE_DIRS 
+        "include"
+    REQUIRES
+        common
+        board
+        driver
+        storage
+)
