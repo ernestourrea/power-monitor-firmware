@@ -10,6 +10,7 @@
 #include "freertos/event_groups.h"
 #include "freertos/timers.h"
 
+// TODO: handle circular dependencies
 #include "connectivity.h"
 
 static const char *TAG = "wifi_mgr";

@@ -10,6 +10,7 @@
 #include <network_provisioning/manager.h>
 #include <network_provisioning/scheme_ble.h>
 
+// TODO: handle circular dependencies
 #include "connectivity.h"
 
 static const char *TAG = "ble_prov";

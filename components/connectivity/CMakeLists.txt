@@ -15,4 +15,5 @@ idf_component_register(
         protocomm
         network_provisioning
         common
+        telemetry
 )

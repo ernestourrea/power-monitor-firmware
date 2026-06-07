@@ -1,5 +1,6 @@
 idf_component_register(
     SRCS 
+        "telemetry.c"
         "mqtt_manager.c"
         "mqtt_topics.c"
         "mqtt_payloads.c"
