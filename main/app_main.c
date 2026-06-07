@@ -7,6 +7,7 @@
 #include "connectivity.h"
 #include "board_config.h"
 #include "io_manager.h"
+#include "mqtt_manager.h"
 
 static const char *TAG = "app_main";
 
@@ -27,9 +28,11 @@ void app_main(void)
     ESP_ERROR_CHECK(board_config_init());
     ESP_ERROR_CHECK(io_manager_init());
     ESP_ERROR_CHECK(connectivity_init());
+    ESP_ERROR_CHECK(mqtt_manager_init());
 
     ESP_ERROR_CHECK(io_manager_start());
     ESP_ERROR_CHECK(connectivity_start());
+    ESP_ERROR_CHECK(mqtt_manager_start());
 
     ESP_LOGI(TAG, "smart contact firmware started");
 }

@@ -5,4 +5,10 @@ idf_component_register(
         "mqtt_payloads.c"
     INCLUDE_DIRS 
         "include"
+    REQUIRES
+        common
+        mqtt
+        json
+        storage
+        app_core
 )
