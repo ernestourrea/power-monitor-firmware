@@ -29,6 +29,7 @@ static TimerHandle_t s_backoff_timer;
 static telemetry_state_t s_state = TELEMETRY_STATE_INIT;
 static uint32_t s_retry_count;
 static bool s_wifi_connected;
+static bool s_started;
 
 static void telemetry_transition(telemetry_event_t event, int32_t reason);
 
@@ -49,7 +50,10 @@ const char *telemetry_state_name(telemetry_state_t state)
 static void backoff_timer_cb(TimerHandle_t timer)
 {
     (void)timer;
-    (void)telemetry_post_event(TELEMETRY_EVT_BACKOFF_EXPIRED, 0);
+    esp_err_t err = telemetry_post_event(TELEMETRY_EVT_BACKOFF_EXPIRED, 0);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "failed to post BACKOFF_EXPIRED: %s", esp_err_to_name(err));
+    }
 }
 
 static void set_state(telemetry_state_t new_state)
@@ -113,29 +117,63 @@ static esp_err_t start_mqtt_if_wifi_connected(void)
     return err;
 }
 
-/*
-static void mqtt_manager_event_cb(mqtt_manager_event_t event, int32_t reason, void *ctx)
+static void handle_mqtt_failure(void)
 {
-    (void)ctx;
+    (void)mqtt_manager_stop_client();
 
-    switch (event) {
-    case MQTT_MANAGER_EVENT_CONNECTED:
-        (void)telemetry_post_event(TELEMETRY_EVT_MQTT_CONNECTED, reason);
-        break;
-
-    case MQTT_MANAGER_EVENT_DISCONNECTED:
-        (void)telemetry_post_event(TELEMETRY_EVT_MQTT_DISCONNECTED, reason);
-        break;
-
-    case MQTT_MANAGER_EVENT_ERROR:
-        (void)telemetry_post_event(TELEMETRY_EVT_MQTT_ERROR, reason);
-        break;
-
-    default:
-        break;
+    if (s_wifi_connected) {
+        start_backoff();
+    } else {
+        stop_backoff_timer();
+        set_state(TELEMETRY_STATE_WAIT_WIFI);
     }
 }
-*/
+
+static void telemetry_start_all(void)
+{
+    if (s_started){
+        return;
+    }
+
+    s_started = true;
+    s_retry_count = 0;
+
+    // TODO: check this logic
+    if (s_wifi_connected) {
+        if (start_mqtt_if_wifi_connected() != ESP_OK) {
+            start_backoff();
+        }
+    } else {
+        set_state(TELEMETRY_STATE_WAIT_WIFI);
+    }
+}
+
+static void telemetry_stop_all(void)
+{
+    if (!s_started){
+        return;
+    }
+
+    s_started = false;
+
+    stop_backoff_timer();
+    (void)mqtt_manager_stop_client();
+    set_state(TELEMETRY_STATE_STOPPED);
+}
+
+static void handle_wifi_disconnect(void)
+{
+    stop_backoff_timer();
+    (void)mqtt_manager_stop_client();
+    set_state(TELEMETRY_STATE_WAIT_WIFI);
+}
+
+static void handle_mqtt_connect(void)
+{
+    stop_backoff_timer();
+    s_retry_count = 0;
+    set_state(TELEMETRY_STATE_MQTT_CONNECTED);   
+}
 
 static void telemetry_transition(telemetry_event_t event, int32_t reason)
 {
@@ -146,7 +184,10 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
         switch (event)
         {
             case TELEMETRY_EVT_START:
-                set_state(TELEMETRY_STATE_INIT);
+                telemetry_start_all();
+                break;
+            case TELEMETRY_EVT_STOP:
+                telemetry_stop_all();
                 break;
             case TELEMETRY_EVT_WIFI_CONNECTED:
                 s_wifi_connected = true;
@@ -154,7 +195,10 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
                 break;
             case TELEMETRY_EVT_WIFI_DISCONNECTED:
                 s_wifi_connected = false;
-                set_state(TELEMETRY_STATE_WAIT_WIFI);
+                handle_wifi_disconnect();
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                handle_mqtt_connect();
                 break;
             default:
                 ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
@@ -165,13 +209,22 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
     case TELEMETRY_STATE_WAIT_WIFI:
         switch (event)
         {
+            case TELEMETRY_EVT_STOP:
+                telemetry_stop_all();
+                break;
             case TELEMETRY_EVT_WIFI_CONNECTED:
                 s_wifi_connected = true;
                 start_mqtt_if_wifi_connected();
                 break;
             case TELEMETRY_EVT_WIFI_DISCONNECTED:
                 s_wifi_connected = false;
-                // Ignore 
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                handle_mqtt_connect();
+                break;
+            case TELEMETRY_EVT_MQTT_DISCONNECTED:
+            case TELEMETRY_EVT_MQTT_ERROR:
+                handle_mqtt_failure();
                 break;
             default:
                 ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
@@ -182,31 +235,22 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
     case TELEMETRY_STATE_MQTT_CONNECTING:
         switch (event)
         {
-            case TELEMETRY_EVT_MQTT_CONNECTED:
-                s_retry_count = 0;
-                set_state(TELEMETRY_STATE_MQTT_CONNECTED);
+            case TELEMETRY_EVT_STOP:
+                telemetry_stop_all();
                 break;
             case TELEMETRY_EVT_WIFI_CONNECTED:
                 s_wifi_connected = true;
-                // Ignore
                 break;
             case TELEMETRY_EVT_WIFI_DISCONNECTED:
                 s_wifi_connected = false;
-                set_state(TELEMETRY_STATE_WAIT_WIFI);
+                handle_wifi_disconnect();
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                handle_mqtt_connect();
                 break;
             case TELEMETRY_EVT_MQTT_DISCONNECTED:
             case TELEMETRY_EVT_MQTT_ERROR:
-                (void)mqtt_manager_stop_client();
-                if (s_wifi_connected) { // TODO: maybe not necessary
-                    start_backoff();
-                } else {
-                    set_state(TELEMETRY_STATE_WAIT_WIFI);
-                }
-                break;
-            case TELEMETRY_EVT_STOP:
-                stop_backoff_timer();
-                (void)mqtt_manager_stop_client();
-                set_state(TELEMETRY_STATE_STOPPED);
+                handle_mqtt_failure();
                 break;
             default:
                 ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
@@ -217,25 +261,22 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
     case TELEMETRY_STATE_MQTT_CONNECTED:
         switch (event)
         {
+            case TELEMETRY_EVT_STOP:
+                telemetry_stop_all();
+                break;
+            case TELEMETRY_EVT_WIFI_CONNECTED:
+                s_wifi_connected = true;
+                break;
             case TELEMETRY_EVT_WIFI_DISCONNECTED:
                 s_wifi_connected = false;
-                stop_backoff_timer();
-                (void)mqtt_manager_stop_client();
-                set_state(TELEMETRY_STATE_WAIT_WIFI);
+                handle_wifi_disconnect();
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                // Ignore
                 break;
             case TELEMETRY_EVT_MQTT_DISCONNECTED:
             case TELEMETRY_EVT_MQTT_ERROR:
-                (void)mqtt_manager_stop_client();
-                if (s_wifi_connected) { // TODO: maybe not necessary
-                    start_backoff();
-                } else {
-                    set_state(TELEMETRY_STATE_WAIT_WIFI);
-                }
-                break;
-            case TELEMETRY_EVT_STOP:
-                stop_backoff_timer();
-                (void)mqtt_manager_stop_client();
-                set_state(TELEMETRY_STATE_STOPPED);
+                handle_mqtt_failure();
                 break;
             default:
                 ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
@@ -246,11 +287,18 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
     case TELEMETRY_STATE_MQTT_BACKOFF:
         switch (event)
         {
+            case TELEMETRY_EVT_STOP:
+                telemetry_stop_all();
+                break;
+            case TELEMETRY_EVT_WIFI_CONNECTED:
+                s_wifi_connected = true;
+                break;
             case TELEMETRY_EVT_WIFI_DISCONNECTED:
                 s_wifi_connected = false;
-                stop_backoff_timer();
-                (void)mqtt_manager_stop_client();
-                set_state(TELEMETRY_STATE_WAIT_WIFI);
+                handle_wifi_disconnect();
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                handle_mqtt_connect();
                 break;
             case TELEMETRY_EVT_MQTT_DISCONNECTED:
             case TELEMETRY_EVT_MQTT_ERROR:
@@ -259,22 +307,7 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
                 (void)mqtt_manager_stop_client();
                 break;
             case TELEMETRY_EVT_BACKOFF_EXPIRED:
-                if (s_wifi_connected) {
-                    if (start_mqtt_if_wifi_connected() != ESP_OK) {
-                        start_backoff();
-                    }
-                } else {
-                    set_state(TELEMETRY_STATE_WAIT_WIFI);
-                }
-                break;
-            case TELEMETRY_EVT_MQTT_CONNECTED:
-                set_state(TELEMETRY_STATE_MQTT_CONNECTED);
-                s_retry_count = 0;                
-                break;
-            case TELEMETRY_EVT_STOP:
-                stop_backoff_timer();
-                (void)mqtt_manager_stop_client();
-                set_state(TELEMETRY_STATE_STOPPED);
+                (void)start_mqtt_if_wifi_connected();
                 break;
             default:
                 ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
@@ -286,20 +319,19 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
         switch (event)
         {
             case TELEMETRY_EVT_START:
-                if (s_wifi_connected) {
-                    s_retry_count = 0;
-                    if (start_mqtt_if_wifi_connected() != ESP_OK) {
-                        start_backoff();
-                    }
-                } else {
-                    set_state(TELEMETRY_STATE_WAIT_WIFI);
-                }
+                telemetry_start_all();
+                break;
+            case TELEMETRY_EVT_STOP:
+                telemetry_stop_all();
                 break;
             case TELEMETRY_EVT_WIFI_CONNECTED:
                 s_wifi_connected = true;
                 break;
             case TELEMETRY_EVT_WIFI_DISCONNECTED:
                 s_wifi_connected = false;
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                // TODO: shouln't happen, throw an error
                 break;
             default:
                 ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
@@ -308,18 +340,52 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
         break;
 
     case TELEMETRY_STATE_ERROR:
-    default:
         switch (event)
         {
+            case TELEMETRY_EVT_START:
+                telemetry_start_all();
+                break;
             case TELEMETRY_EVT_STOP:
-                stop_backoff_timer();
-                (void)mqtt_manager_stop_client();
-                set_state(TELEMETRY_STATE_STOPPED);
+                telemetry_stop_all();
+                break;
+            case TELEMETRY_EVT_WIFI_CONNECTED:
+                s_wifi_connected = true;
+                break;
+            case TELEMETRY_EVT_WIFI_DISCONNECTED:
+                s_wifi_connected = false;
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                handle_mqtt_connect();
                 break;
             default:
                 ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
                 return;
         }
+        break;
+
+    default:
+        switch (event)
+        {
+            case TELEMETRY_EVT_START:
+                telemetry_start_all();
+                break;
+            case TELEMETRY_EVT_STOP:
+                telemetry_stop_all();
+                break;
+            case TELEMETRY_EVT_WIFI_CONNECTED:
+                s_wifi_connected = true;
+                break;
+            case TELEMETRY_EVT_WIFI_DISCONNECTED:
+                s_wifi_connected = false;
+                break;
+            case TELEMETRY_EVT_MQTT_CONNECTED:
+                handle_mqtt_connect();
+                break;
+            default:
+                ESP_LOGW(TAG, "unexpected event %d in state %s", event, telemetry_state_name(s_state));
+                return;
+        }
+        break;
     }
 }
 
@@ -369,6 +435,14 @@ esp_err_t telemetry_init(void)
 
 esp_err_t telemetry_start(void)
 {
+    if (!s_queue) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (s_task_handle) {
+        return telemetry_post_event(TELEMETRY_EVT_START, 0);
+    }
+
     BaseType_t ok = xTaskCreate(
         telemetry_task,
         "telemetry",
