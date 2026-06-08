@@ -11,6 +11,7 @@
 #include "common_types.h"
 #include "connectivity.h"
 #include "telemetry.h"
+#include "status_indicator.h"
 
 #define APP_EVENT_QUEUE_LEN 24
 
@@ -64,29 +65,42 @@ static void app_core_handle_event(app_event_t event)
         //set_state(DEVICE_MQTT_CONNECTING);
         break;
     case APP_EVT_WIFI_CONNECTED:
+        status_indicator_set_wifi_connected(true);
         telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
         //set_state(DEVICE_MQTT_CONNECTING);
         break;
     case APP_EVT_WIFI_DISCONNECTED:
+        status_indicator_set_wifi_connected(false);
+        status_indicator_set_mqtt_connected(false);
         telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
         //fault_manager_raise(FAULT_WIFI_DISCONNECTED, FAULT_SEVERITY_WARNING);
         //set_state(DEVICE_OFFLINE);
         break;
     case APP_EVT_MQTT_CONNECTED:
+        status_indicator_set_mqtt_connected(true);
         //set_state(DEVICE_ONLINE);
         break;
     case APP_EVT_MQTT_DISCONNECTED:
+        status_indicator_set_mqtt_connected(false);
         //fault_manager_raise(FAULT_MQTT_DISCONNECTED, FAULT_SEVERITY_WARNING);
         //set_state(DEVICE_OFFLINE);
         break;
     case APP_EVT_FAULT_RAISED:
         //fault_manager_raise(FAULT_FAULT_RAISED, FAULT_SEVERITY_WARNING);
         //set_state(DEVICE_FAULT);
+        (void)command_handler_handle_app_event(event);
         break;
     case APP_EVT_FAULT_CLEARED:
         //if (s_state == DEVICE_FAULT) {
         //    set_state(DEVICE_OFFLINE);
         //}
+        (void)command_handler_handle_app_event(event);
+        break;
+    case APP_EVT_REPROVISIONING_INDICATE_REQUESTED:
+        status_indicator_play_request(STATUS_INDICATOR_REQUEST_PROVISIONING);
+        break;
+    case APP_EVT_FACTORY_RESET_INDICATE_REQUESTED:
+        status_indicator_play_request(STATUS_INDICATOR_REQUEST_FACTORY_RESET);
         break;
     case APP_EVT_REPROVISIONING_REQUESTED:
         connectivity_post_event(CONN_EVT_REPROVISION_REQUESTED, 0);
@@ -96,6 +110,8 @@ static void app_core_handle_event(app_event_t event)
         //set_state(DEVICE_FACTORY_RESET);
         break;
     case APP_EVT_NO_LOAD_DETECTED:
+    case APP_EVT_HIGH_POWER_ACTIVE:
+    case APP_EVT_HIGH_POWER_CLEARED:
     case APP_EVT_COMMAND_RELAY_OPEN:
     case APP_EVT_COMMAND_RELAY_CLOSE:
     case APP_EVT_COMMAND_RELAY_TOGGLE:

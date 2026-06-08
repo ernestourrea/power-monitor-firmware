@@ -1,13 +1,12 @@
 idf_component_register(
     SRCS 
-        "app_core.c"
-        "command_handler.c"
+        "status_indicator.c"
     INCLUDE_DIRS 
         "include"
     REQUIRES
+        board
         common
-        connectivity
-        telemetry
+        driver
+        led_strip
         relay_control
-        status_indicator
 )

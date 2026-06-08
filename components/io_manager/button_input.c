@@ -133,6 +133,7 @@ static void button_task(void *arg)
             {
                 provisioning_indicated = true;
                 ESP_LOGI(TAG, "provisioning hold threshold reached");
+                app_core_post_event(APP_EVT_REPROVISIONING_INDICATE_REQUESTED);
                 // Indicate provisioning request here.
             }
 
@@ -140,6 +141,7 @@ static void button_task(void *arg)
             {
                 factory_reset_indicated = true;
                 ESP_LOGW(TAG, "factory reset hold threshold reached");
+                app_core_post_event(APP_EVT_FACTORY_RESET_INDICATE_REQUESTED);
                 // Indicate factory reset request here.
             }
         }

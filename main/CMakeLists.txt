@@ -12,4 +12,5 @@ idf_component_register(
         app_core
         relay_control
         storage
+        status_indicator
 )

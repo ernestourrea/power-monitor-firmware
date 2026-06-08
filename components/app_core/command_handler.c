@@ -17,12 +17,24 @@ esp_err_t command_handler_handle_app_event(const app_event_t event)
     switch (event) {
     case APP_EVT_NO_LOAD_DETECTED:
         return relay_request_open(RELAY_REASON_NO_LOAD);
+    case APP_EVT_HIGH_POWER_ACTIVE:
+        relay_control_set_high_power(true);
+        return ESP_OK;
+    case APP_EVT_HIGH_POWER_CLEARED:
+        relay_control_set_high_power(false);
+        return ESP_OK;
     case APP_EVT_COMMAND_RELAY_OPEN:
         return relay_request_open(RELAY_REASON_USER_COMMAND);
     case APP_EVT_COMMAND_RELAY_CLOSE:
         return relay_request_close(RELAY_REASON_USER_COMMAND);
     case APP_EVT_COMMAND_RELAY_TOGGLE:
         return relay_is_closed() ? relay_request_open(RELAY_REASON_USER_COMMAND) : relay_request_close(RELAY_REASON_USER_COMMAND);
+    case APP_EVT_FAULT_RAISED:
+        relay_control_set_critical_fault_latched(true);
+        return ESP_OK;
+    case APP_EVT_FAULT_CLEARED:
+        relay_control_set_critical_fault_latched(false);
+        return ESP_OK;
     case APP_EVT_COMMAND_CONFIG_UPDATE:
         ESP_LOGI(TAG, "Received: APP_EVT_COMMAND_CONFIG_UPDATE");
         /*fault_manager_clear(FAULT_OVERCURRENT | FAULT_OVERVOLTAGE | FAULT_OVERPOWER |
