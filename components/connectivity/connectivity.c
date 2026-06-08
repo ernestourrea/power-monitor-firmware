@@ -66,6 +66,30 @@ static void backoff_timer_cb(TimerHandle_t timer)
     (void)connectivity_post_event(CONN_EVT_BACKOFF_EXPIRED, 0);
 }
 
+static void state_entry(connectivity_state_t new_state)
+{
+    switch (new_state)
+    {
+    case CONN_STATE_NO_CREDENTIALS:
+        esp_err_t err = ble_provisioning_start();
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "ble_provisioning_start failed: %s", esp_err_to_name(err));
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+static void state_exit(connectivity_state_t old_state)
+{
+    switch (old_state)
+    {
+    default:
+        break;
+    }
+}
+
 static void set_state(connectivity_state_t new_state)
 {
     if (s_state == new_state) {
@@ -76,7 +100,9 @@ static void set_state(connectivity_state_t new_state)
              connectivity_state_name(s_state),
              connectivity_state_name(new_state));
 
+    state_exit(s_state);
     s_state = new_state;
+    state_entry(s_state);
 }
 
 static uint32_t get_backoff_ms(void)
@@ -143,11 +169,6 @@ static void connectivity_transition(connectivity_event_t event, int32_t reason)
         break;
     
     case CONN_STATE_NO_CREDENTIALS:
-        esp_err_t err = ble_provisioning_start();
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "ble_provisioning_start failed: %s", esp_err_to_name(err));
-            set_state(CONN_STATE_ERROR);
-        }
         switch (event) 
         {
             case CONN_EVT_PROVISIONING_STARTED:
