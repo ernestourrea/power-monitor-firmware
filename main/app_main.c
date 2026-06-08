@@ -8,6 +8,9 @@
 #include "board_config.h"
 #include "io_manager.h"
 #include "telemetry.h"
+#include "app_core.h"
+#include "relay_control.h"
+#include "config_store.h"
 
 static const char *TAG = "app_main";
 
@@ -26,11 +29,16 @@ void app_main(void)
     ESP_ERROR_CHECK(init_nvs());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(board_config_init());
+    ESP_ERROR_CHECK(config_store_init());
+    ESP_ERROR_CHECK(app_core_init());
     ESP_ERROR_CHECK(io_manager_init());
+    ESP_ERROR_CHECK(relay_control_init());
     ESP_ERROR_CHECK(connectivity_init());
     ESP_ERROR_CHECK(telemetry_init());
 
+    ESP_ERROR_CHECK(app_core_start());
     ESP_ERROR_CHECK(io_manager_start());
+    ESP_ERROR_CHECK(relay_control_start());
     ESP_ERROR_CHECK(connectivity_start());
     ESP_ERROR_CHECK(telemetry_start());
 

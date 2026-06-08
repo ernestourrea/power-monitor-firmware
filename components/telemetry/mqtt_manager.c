@@ -76,10 +76,10 @@ static bool topic_matches(mqtt_topic_kind_t kind, const char *topic, int topic_l
 static void handle_data_event(const esp_mqtt_event_handle_t event)
 {
     app_event_t app_event;
-    char payload[MQTT_PAYLOAD_BUF_LEN];
+    //char payload[MQTT_PAYLOAD_BUF_LEN];
     esp_err_t err = ESP_ERR_INVALID_ARG;
-    bool relay_command = false;
-    bool relay_command_close = false;
+    //bool relay_command = false;
+    //bool relay_command_close = false;
 
     if (topic_matches(MQTT_TOPIC_COMMANDS, event->topic, event->topic_len)) {
         err = mqtt_payload_parse_command(event->data, event->data_len, &app_event);
@@ -106,7 +106,7 @@ static void handle_data_event(const esp_mqtt_event_handle_t event)
         err = mqtt_payload_parse_overpower_config(event->data, event->data_len, &app_event);
     }
     if (err == ESP_OK) {
-        esp_err_t post_err = app_core_post_event(&app_event, 0);
+        esp_err_t post_err = app_core_post_event(app_event);
         /*
         if (post_err == ESP_OK && relay_command) {
             (void)publish_relay_state(relay_command_close);

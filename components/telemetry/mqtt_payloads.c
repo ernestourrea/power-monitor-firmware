@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include "esp_log.h"
 
-#include "app_events.h"
+#include "app_core.h" // TODO: maybe return to app_events (?)
 #include "config_store.h"
 
 static const char *TAG = "mqtt_payloads";
@@ -25,14 +25,14 @@ esp_err_t mqtt_payload_parse_command(const char *data, size_t len, app_event_t *
     if (len == 2 && strncmp(data, "ON", len) == 0)
     {
         ESP_LOGI(TAG, "Close relay request received from MQTT");
-        out_event->id = APP_EVENT_COMMAND_RELAY_CLOSE;
+        *out_event = APP_EVT_COMMAND_RELAY_CLOSE;
         return ESP_OK;
     }
 
     if (len == 3 && strncmp(data, "OFF", len) == 0)
     {
         ESP_LOGI(TAG, "Open relay request received from MQTT");
-        out_event->id = APP_EVENT_COMMAND_RELAY_OPEN;
+        *out_event = APP_EVT_COMMAND_RELAY_OPEN;
         return ESP_OK;
     }
 
@@ -78,7 +78,7 @@ esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_
     if (err == ESP_OK)
     {
         memset(out_event, 0, sizeof(*out_event));
-        out_event->id = APP_EVENT_COMMAND_CONFIG_UPDATE;
+        *out_event = APP_EVT_COMMAND_CONFIG_UPDATE;
     }
 
     return err;
@@ -123,7 +123,7 @@ esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t le
     if (err == ESP_OK)
     {
         memset(out_event, 0, sizeof(*out_event));
-        out_event->id = APP_EVENT_COMMAND_CONFIG_UPDATE;
+        *out_event = APP_EVT_COMMAND_CONFIG_UPDATE;
     }
 
     return err;

@@ -9,4 +9,7 @@ idf_component_register(
         board
         io_manager
         telemetry
+        app_core
+        relay_control
+        storage
 )

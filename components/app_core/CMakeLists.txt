@@ -3,4 +3,8 @@ idf_component_register(
         "app_core.c"
     INCLUDE_DIRS 
         "include"
+    REQUIRES
+        common
+        connectivity
+        telemetry
 )

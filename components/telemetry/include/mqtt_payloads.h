@@ -5,7 +5,7 @@
 
 // TODO: fix after adding components
 #include <stddef.h>
-#include "app_events.h"
+#include "app_core.h" // TODO: maybe return to app_events (?)
 #include "esp_err.h"
 //#include "fault_types.h"
 //#include "measurement_types.h"

@@ -7,6 +7,7 @@
 #include "relay_types.h"
 
 esp_err_t relay_control_init(void);
+esp_err_t relay_control_start(void);
 esp_err_t relay_request_open(relay_request_reason_t reason);
 esp_err_t relay_request_close(relay_request_reason_t reason);
 relay_state_t relay_get_state(void);
