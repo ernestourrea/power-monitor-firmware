@@ -6,12 +6,65 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include "esp_log.h"
 
 #include "app_core.h" // TODO: maybe return to app_events (?)
 #include "config_store.h"
 
 static const char *TAG = "mqtt_payloads";
+
+
+static esp_err_t append_json(char *out, size_t out_len, size_t *used, const char *fmt, ...)
+{
+    if (!out || !used || *used >= out_len) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    va_list args;
+    va_start(args, fmt);
+    const int n = vsnprintf(out + *used, out_len - *used, fmt, args);
+    va_end(args);
+
+    if (n < 0 || (size_t)n >= out_len - *used) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    *used += (size_t)n;
+    return ESP_OK;
+}
+
+esp_err_t mqtt_payload_build_harmonics(const measurement_snapshot_t *s, char *out, size_t out_len)
+{
+    if (!s || !out || out_len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    size_t used = 0;
+    esp_err_t err = append_json(out, out_len, &used,
+        "{\"timestamp\":%llu,\"fundamental_hz\":%.3f,\"thd\":%.3f,\"current_harmonics\":[",
+        (unsigned long long)(s->timestamp_ms / 1000ULL),
+        s->current_harmonics.fundamental_hz,
+        s->current_harmonics.thd_percent);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    for (uint8_t i = 0; i < THD_HARMONIC_COUNT; i++) {
+        err = append_json(out, out_len, &used,
+            "%s{\"n\":%u,\"rms\":%.6f,\"percent\":%.3f}",
+            i == 0 ? "" : ",",
+            (unsigned int)(i + 1U),
+            s->current_harmonics.rms[i],
+            s->current_harmonics.percent[i]);
+        if (err != ESP_OK) {
+            return err;
+        }
+    }
+
+    return append_json(out, out_len, &used, "]}");
+}
+
 
 esp_err_t mqtt_payload_build_telemetry(const measurement_snapshot_t *s, char *out, size_t out_len)
 {

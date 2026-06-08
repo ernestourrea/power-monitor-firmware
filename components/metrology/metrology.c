@@ -14,7 +14,7 @@
 #include "common_types.h"
 #include "power_calculator.h"
 #include "config_store.h"
-//#include "thd_calculator.h"
+#include "thd_calculator.h"
 //#include "zero_cross_monitor.h"
 
 #define SAMPLE_QUEUE_LEN 256
@@ -165,6 +165,12 @@ void metrology_task(void *arg)
             const float fundamental_hz = 60.0f; //zc.frequency_hz > 0.0f ? zc.frequency_hz : 50.0f;
             const uint64_t now_ms = (uint64_t)(esp_timer_get_time() / 1000ULL);
 
+            harmonic_result_t current_harmonics;
+            if (thd_calculator_compute(current_window, count, CONFIG_SMART_CONTACT_ADC_SAMPLE_RATE_HZ, fundamental_hz, &current_harmonics) != ESP_OK) {
+                memset(&current_harmonics, 0, sizeof(current_harmonics));
+                current_harmonics.fundamental_hz = fundamental_hz;
+            }
+
             measurement_snapshot_t snapshot = {
                 .timestamp_ms = now_ms,
                 .vrms = power.vrms,
@@ -173,12 +179,13 @@ void metrology_task(void *arg)
                 .reactive_power_var = power.reactive_power_var,
                 .apparent_power_va = power.apparent_power_va,
                 .power_factor = power.power_factor,
-                .current_thd_percent = 0.0f,//thd_calculator_compute_percent(current_window, count, CONFIG_SMART_CONTACT_ADC_SAMPLE_RATE_HZ, fundamental_hz),
-                .frequency_hz = 60.0f,//zc.frequency_hz,
+                .current_thd_percent = current_harmonics.thd_percent,
+                .frequency_hz = fundamental_hz,
                 //.energy_wh = energy.wh,
                 //.relay_closed = false,
                 //.fault_flags = zc.fault_candidates,
             };
+            snapshot.current_harmonics = current_harmonics;
 
             /*
             ESP_LOGI(TAG, "RMS Voltage: %.4f", power.vrms);

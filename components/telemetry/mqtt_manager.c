@@ -23,7 +23,7 @@
 #include "telemetry.h"
 
 #define MQTT_TOPIC_BUF_LEN 128
-#define MQTT_PAYLOAD_BUF_LEN 512
+#define MQTT_PAYLOAD_BUF_LEN 2048
 #define MQTT_WAVEFORM_SAMPLES_PER_CHUNK 32
 #define MQTT_WAVEFORM_FORMAT_I16_SCALED 1
 
@@ -79,6 +79,9 @@ static void subscribe_topics(void)
     if (mqtt_topics_build(s_device_id, MQTT_TOPIC_WAVEFORM_REQUEST, topic, sizeof(topic)) == ESP_OK) {
         esp_mqtt_client_subscribe(s_client, topic, 1);
     }
+    if (mqtt_topics_build(s_device_id, MQTT_TOPIC_HARMONICS_REQUEST, topic, sizeof(topic)) == ESP_OK) {
+        esp_mqtt_client_subscribe(s_client, topic, 1);
+    }
 }
 
 static bool topic_matches(mqtt_topic_kind_t kind, const char *topic, int topic_len)
@@ -88,6 +91,36 @@ static bool topic_matches(mqtt_topic_kind_t kind, const char *topic, int topic_l
         return false;
     }
     return strlen(expected) == (size_t)topic_len && strncmp(expected, topic, topic_len) == 0;
+}
+
+
+static esp_err_t publish_latest_harmonics(void)
+{
+    if (!mqtt_manager_is_connected()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    measurement_snapshot_t snapshot;
+    esp_err_t err = metrology_get_latest_snapshot(&snapshot);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    char topic[MQTT_TOPIC_BUF_LEN];
+    char payload[MQTT_PAYLOAD_BUF_LEN];
+
+    err = mqtt_payload_build_harmonics(&snapshot, payload, sizeof(payload));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = mqtt_topics_build(s_device_id, MQTT_TOPIC_HARMONICS, topic, sizeof(topic));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    const int msg_id = esp_mqtt_client_publish(s_client, topic, payload, 0, 1, 0);
+    return msg_id >= 0 ? ESP_OK : ESP_FAIL;
 }
 
 static void handle_data_event(const esp_mqtt_event_handle_t event)
@@ -103,6 +136,14 @@ static void handle_data_event(const esp_mqtt_event_handle_t event)
         /*relay_command = (err == ESP_OK) &&
                         (app_event.id == APP_EVENT_COMMAND_RELAY_CLOSE || app_event.id == APP_EVENT_COMMAND_RELAY_OPEN);
         relay_command_close = app_event.id == APP_EVENT_COMMAND_RELAY_CLOSE;*/
+    } else if (topic_matches(MQTT_TOPIC_HARMONICS_REQUEST, event->topic, event->topic_len)) {
+        err = publish_latest_harmonics();
+        if (err == ESP_OK) {
+            ESP_LOGI(TAG, "harmonics telemetry requested and published");
+        } else {
+            ESP_LOGW(TAG, "failed to publish harmonics telemetry: %s", esp_err_to_name(err));
+        }
+        return;
     } else if (topic_matches(MQTT_TOPIC_WAVEFORM_REQUEST, event->topic, event->topic_len)) {
         err = metrology_request_waveform_capture();
         if (err == ESP_OK) {

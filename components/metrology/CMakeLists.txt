@@ -4,6 +4,7 @@ idf_component_register(
         "metrology.c"
         "calibration.c"
         "power_calculator.c"
+        "thd_calculator.c"
     INCLUDE_DIRS 
         "include"
     REQUIRES 

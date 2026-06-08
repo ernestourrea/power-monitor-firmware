@@ -5,6 +5,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "thd_calculator.h"
 
 typedef struct {
     int32_t voltage_raw;
@@ -22,6 +23,7 @@ typedef struct {
     float power_factor;
     float current_thd_percent;
     float frequency_hz;
+    harmonic_result_t current_harmonics;
     //double energy_wh;
     //bool relay_closed; // TODO: check if needed
     //uint32_t fault_flags;

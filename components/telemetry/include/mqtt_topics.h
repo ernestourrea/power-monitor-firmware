@@ -12,6 +12,7 @@ smartcontact/contacto_01/control/rele
 smartcontact/contacto_01/control/limite_potencia
 smartcontact/contacto_01/control/tiempo_muestreo
 smartcontact/contacto_01/control/waveform/request
+smartcontact/contacto_01/control/armonicos/request
 
 Publishes:
 smartcontact/contacto_01/telemetria/estado
@@ -27,6 +28,7 @@ typedef enum {
     MQTT_TOPIC_POWER_LIM,
     MQTT_TOPIC_TS,
     MQTT_TOPIC_WAVEFORM_REQUEST,
+    MQTT_TOPIC_HARMONICS_REQUEST,
 // Publishes
     MQTT_TOPIC_TELEMETRY,
     MQTT_TOPIC_HARMONICS,
