@@ -80,6 +80,12 @@ void metrology_task(void *arg)
         }
         voltage_window[count] = calibration_apply_voltage(&s_calibration, sample.voltage_raw);
         current_window[count] = calibration_apply_current(&s_calibration, sample.current_raw);
+
+        if(count==0){
+            ESP_LOGI(TAG, "Raw Voltage: %.4f", voltage_window[count]);
+            ESP_LOGI(TAG, "Raw Current: %.4f", current_window[count]);
+        }
+
         count++;
 
         if (count >= window_count) {
@@ -106,9 +112,11 @@ void metrology_task(void *arg)
                 //.fault_flags = zc.fault_candidates,
             };
 
+            /*
             ESP_LOGI(TAG, "RMS Voltage: %.4f", power.vrms);
             ESP_LOGI(TAG, "RMS Current: %.4f", power.irms);
-
+            */
+           
             s_latest_snapshot = snapshot;
             if (xQueueSend(s_snapshot_queue, &snapshot, 0) != pdTRUE) {
                 // If queue full, drop oldest sample

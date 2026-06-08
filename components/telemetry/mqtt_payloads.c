@@ -13,6 +13,97 @@
 
 static const char *TAG = "mqtt_payloads";
 
+esp_err_t mqtt_payload_build_telemetry(const measurement_snapshot_t *s, char *out, size_t out_len)
+{
+    if (!s || !out || out_len == 0)
+    {
+        return ESP_ERR_INVALID_ARG;
+    } 
+
+    const int n = snprintf(out, out_len,
+        "{\"timestamp\":%llu,\"v\":%.3f,\"i\":%.3f,\"p_activa\":%.3f,\"p_reactiva\":%.3f,\"p_aparente\":%.3f,"
+        "\"fp\":%.3f,\"thd\":%.3f,\"frequency\":%.3f}",
+        (unsigned long long)(s->timestamp_ms / 1000ULL), 
+        s->vrms, 
+        s->irms, 
+        s->active_power_w,
+        s->reactive_power_var, 
+        s->apparent_power_va, 
+        s->power_factor, 
+        s->current_thd_percent, 
+        s->frequency_hz
+    );
+
+    return (n > 0 && (size_t)n < out_len) ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
+/*
+static const char *fault_flag_to_string(uint32_t flag)
+{
+    switch (flag) {
+    case FAULT_OVERCURRENT: return "FAULT_OVERCURRENT";
+    case FAULT_OVERVOLTAGE: return "FAULT_OVERVOLTAGE";
+    case FAULT_UNDERVOLTAGE: return "FAULT_UNDERVOLTAGE";
+    case FAULT_OVERPOWER: return "FAULT_OVERPOWER";
+    case FAULT_FREQUENCY_OUT_OF_RANGE: return "FAULT_FREQUENCY_OUT_OF_RANGE";
+    case FAULT_HIGH_THD: return "FAULT_HIGH_THD";
+    case FAULT_POWER_FACTOR_TOO_LOW: return "FAULT_POWER_FACTOR_TOO_LOW";
+    case FAULT_NO_VOLTAGE: return "FAULT_NO_VOLTAGE";
+    case FAULT_NO_CURRENT_WHEN_EXPECTED: return "FAULT_NO_CURRENT_WHEN_EXPECTED";
+    case FAULT_CURRENT_WHEN_RELAY_OPEN: return "FAULT_CURRENT_WHEN_RELAY_OPEN";
+    case FAULT_ADC_SATURATION: return "FAULT_ADC_SATURATION";
+    case FAULT_ADC_DISCONNECTED: return "FAULT_ADC_DISCONNECTED";
+    case FAULT_ZERO_CROSS_MISSING: return "FAULT_ZERO_CROSS_MISSING";
+    case FAULT_ZERO_CROSS_STUCK: return "FAULT_ZERO_CROSS_STUCK";
+    case FAULT_RELAY_WELDED: return "FAULT_RELAY_WELDED";
+    case FAULT_RELAY_FAILED_TO_CLOSE: return "FAULT_RELAY_FAILED_TO_CLOSE";
+    case FAULT_RELAY_FAILED_TO_OPEN: return "FAULT_RELAY_FAILED_TO_OPEN";
+    case FAULT_TEMPERATURE_HIGH: return "FAULT_TEMPERATURE_HIGH";
+    case FAULT_FLASH_ERROR: return "FAULT_FLASH_ERROR";
+    case FAULT_WIFI_DISCONNECTED: return "FAULT_WIFI_DISCONNECTED";
+    case FAULT_MQTT_DISCONNECTED: return "FAULT_MQTT_DISCONNECTED";
+    case FAULT_TIME_SYNC_FAILED: return "FAULT_TIME_SYNC_FAILED";
+    default: return NULL;
+    }
+}
+
+// TODO: check this function
+esp_err_t mqtt_payload_build_fault_flags(uint32_t flags, char *out, size_t out_len)
+{
+    if (!out || out_len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    size_t used = 0;
+    int n = snprintf(out + used, out_len - used, "[");
+    if (n < 0 || (size_t)n >= out_len - used) {
+        return ESP_ERR_NO_MEM;
+    }
+    used += (size_t)n;
+
+    bool first = true;
+    for (uint32_t bit = 0; bit < 22; ++bit) {
+        const uint32_t flag = (1UL << bit);
+        const char *name = fault_flag_to_string(flag);
+        if ((flags & flag) == 0 || !name) {
+            continue;
+        }
+
+        n = snprintf(out + used, out_len - used, "%s\"%s\"", first ? "" : ", ", name);
+        if (n < 0 || (size_t)n >= out_len - used) {
+            return ESP_ERR_NO_MEM;
+        }
+        used += (size_t)n;
+        first = false;
+    }
+
+    n = snprintf(out + used, out_len - used, "]");
+    if (n < 0 || (size_t)n >= out_len - used) {
+        return ESP_ERR_NO_MEM;
+    }
+    return ESP_OK;
+}*/
+
 esp_err_t mqtt_payload_parse_command(const char *data, size_t len, app_event_t *out_event)
 {
     if (!data || !out_event || len == 0)
@@ -116,7 +207,7 @@ esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t le
     smart_contact_config_t config;
     config_store_get_cached(&config);
     config.report_interval_s = (uint32_t)period_s;
-    ESP_LOGI(TAG, "Report Interval: %.4f s", period_s);
+    ESP_LOGI(TAG, "Report Interval: %lu s", period_s);
 
     esp_err_t err = config_store_validate(&config) ? config_store_save(&config) : ESP_ERR_INVALID_ARG;
 

@@ -12,4 +12,5 @@ idf_component_register(
         json
         storage
         app_core
+        metrology
 )

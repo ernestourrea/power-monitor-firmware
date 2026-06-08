@@ -17,12 +17,13 @@
 #include "config_store.h"
 #include "common_types.h"
 #include "app_core.h"
+#include "metrology.h"
 
 // TODO: handle circular dependencies
 #include "telemetry.h"
 
 #define MQTT_TOPIC_BUF_LEN 128
-#define MQTT_PAYLOAD_BUF_LEN 4096
+#define MQTT_PAYLOAD_BUF_LEN 512
 
 static const char *TAG = "mqtt_mgr";
 static esp_mqtt_client_handle_t s_client;
@@ -97,9 +98,7 @@ static void handle_data_event(const esp_mqtt_event_handle_t event)
             }
         }
         return;
-    } else if (topic_matches(MQTT_TOPIC_CONFIG, event->topic, event->topic_len)) {
-        err = mqtt_payload_parse_config(event->data, event->data_len, &app_event);
-    }*/ else if (topic_matches(MQTT_TOPIC_TS, event->topic, event->topic_len)) {
+    }*/else if (topic_matches(MQTT_TOPIC_TS, event->topic, event->topic_len)) {
         err = mqtt_payload_parse_telemetry_period_config(event->data, event->data_len, &app_event);
         update_telemetry_period();
     } else if (topic_matches(MQTT_TOPIC_POWER_LIM, event->topic, event->topic_len)) {
@@ -159,21 +158,19 @@ static void mqtt_publish_task(void *arg)
             continue;
         }
 
-        /*
         measurement_snapshot_t snapshot;
         if (metrology_get_latest_snapshot(&snapshot) == ESP_OK) {
-            snapshot.relay_closed = relay_is_closed();
             if (mqtt_payload_build_telemetry(&snapshot, payload, sizeof(payload)) == ESP_OK &&
                 mqtt_topics_build(s_device_id, MQTT_TOPIC_TELEMETRY, topic, sizeof(topic)) == ESP_OK) {
                 esp_mqtt_client_publish(s_client, topic, payload, 0, 1, 0);
-            }
-
+            }/*
             if (mqtt_payload_build_harmonics(&snapshot, payload, sizeof(payload)) == ESP_OK &&
                 mqtt_topics_build(s_device_id, MQTT_TOPIC_HARMONICS, topic, sizeof(topic)) == ESP_OK) {
                 esp_mqtt_client_publish(s_client, topic, payload, 0, 1, 0);
-            }
+            }*/
         }
 
+        /*
         fault_event_t fault;
         bool fault_event_received = false;
         while (fault_manager_get_event_queue() &&
