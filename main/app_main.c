@@ -32,6 +32,16 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(board_config_init());
     ESP_ERROR_CHECK(config_store_init());
+
+    // Calibration parameters
+    smart_contact_config_t config;
+    ESP_ERROR_CHECK(config_store_get_cached(&config));
+    config.voltage_gain = 1.0f;
+    config.current_gain = 1.0f;
+    config.voltage_offset = 1849.00f;
+    config.current_offset = 1849.00f;
+    ESP_ERROR_CHECK(config_store_save(&config));
+
     ESP_ERROR_CHECK(app_core_init());
     ESP_ERROR_CHECK(io_manager_init());
     ESP_ERROR_CHECK(metrology_init());
