@@ -24,6 +24,8 @@
 
 #define MQTT_TOPIC_BUF_LEN 128
 #define MQTT_PAYLOAD_BUF_LEN 512
+#define MQTT_WAVEFORM_SAMPLES_PER_CHUNK 32
+#define MQTT_WAVEFORM_FORMAT_I16_SCALED 1
 
 static const char *TAG = "mqtt_mgr";
 static esp_mqtt_client_handle_t s_client;
@@ -32,6 +34,20 @@ static bool s_connected;
 static uint32_t s_telemetry_delay_ms;
 static bool s_client_started;
 static TaskHandle_t s_publish_task_handle;
+static TaskHandle_t s_waveform_publish_task_handle;
+
+typedef struct __attribute__((packed)) {
+    uint32_t sequence_id;
+    uint64_t timestamp_ms;
+    uint16_t chunk_index;
+    uint16_t chunk_count;
+    uint16_t sample_rate_hz;
+    uint16_t total_samples;
+    uint16_t samples_in_chunk;
+    uint8_t channels;
+    uint8_t format;
+    int16_t values[MQTT_WAVEFORM_SAMPLES_PER_CHUNK * METROLOGY_WAVEFORM_CHANNELS];
+} mqtt_waveform_chunk_t;
 
 // Certificate for MQTT broker.
 extern const uint8_t mqtt_certificate_pem_start[]   asm("_binary_mqtt_certificate_pem_start");
@@ -87,18 +103,15 @@ static void handle_data_event(const esp_mqtt_event_handle_t event)
         /*relay_command = (err == ESP_OK) &&
                         (app_event.id == APP_EVENT_COMMAND_RELAY_CLOSE || app_event.id == APP_EVENT_COMMAND_RELAY_OPEN);
         relay_command_close = app_event.id == APP_EVENT_COMMAND_RELAY_CLOSE;*/
-    }/* else if (topic_matches(MQTT_TOPIC_WAVEFORM_REQUEST, event->topic, event->topic_len)) {
-        if (s_connected && s_client) {
-            char waveform_topic[MQTT_TOPIC_BUF_LEN];
-            if (mqtt_topics_build(s_device_id, MQTT_TOPIC_WAVEFORM_TELEMETRY, waveform_topic, sizeof(waveform_topic)) == ESP_OK &&
-                mqtt_payload_build_waveform(payload, sizeof(payload)) == ESP_OK) {
-                if (esp_mqtt_client_publish(s_client, waveform_topic, payload, 0, 1, 0) < 0) {
-                    SC_LOGW(TAG, "failed to publish waveform telemetry");
-                }
-            }
+    } else if (topic_matches(MQTT_TOPIC_WAVEFORM_REQUEST, event->topic, event->topic_len)) {
+        err = metrology_request_waveform_capture();
+        if (err == ESP_OK) {
+            ESP_LOGI(TAG, "waveform capture requested");
+        } else {
+            ESP_LOGW(TAG, "failed to request waveform capture: %s", esp_err_to_name(err));
         }
         return;
-    }*/else if (topic_matches(MQTT_TOPIC_TS, event->topic, event->topic_len)) {
+    } else if (topic_matches(MQTT_TOPIC_TS, event->topic, event->topic_len)) {
         err = mqtt_payload_parse_telemetry_period_config(event->data, event->data_len, &app_event);
         update_telemetry_period();
     } else if (topic_matches(MQTT_TOPIC_POWER_LIM, event->topic, event->topic_len)) {
@@ -141,6 +154,95 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     default:
         break;
+    }
+}
+
+static size_t waveform_chunk_payload_len(uint16_t samples_in_chunk)
+{
+    return sizeof(mqtt_waveform_chunk_t) -
+           sizeof(((mqtt_waveform_chunk_t *)0)->values) +
+           ((size_t)samples_in_chunk * METROLOGY_WAVEFORM_CHANNELS * sizeof(int16_t));
+}
+
+static void mqtt_waveform_publish_task(void *arg)
+{
+    (void)arg;
+    static metrology_waveform_capture_t waveform;
+    char topic[MQTT_TOPIC_BUF_LEN];
+
+    while (1) {
+        QueueHandle_t waveform_queue = metrology_get_waveform_queue();
+        if (!waveform_queue) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
+        if (xQueueReceive(waveform_queue, &waveform, portMAX_DELAY) != pdTRUE) {
+            continue;
+        }
+
+        if (!mqtt_manager_is_connected()) {
+            ESP_LOGW(TAG, "dropping waveform seq=%lu because MQTT is not connected",
+                     (unsigned long)waveform.sequence_id);
+            continue;
+        }
+
+        if (mqtt_topics_build(s_device_id, MQTT_TOPIC_WAVEFORM, topic, sizeof(topic)) != ESP_OK) {
+            ESP_LOGW(TAG, "failed to build waveform MQTT topic");
+            continue;
+        }
+
+        const uint16_t chunk_count =
+            (waveform.sample_count + MQTT_WAVEFORM_SAMPLES_PER_CHUNK - 1U) /
+            MQTT_WAVEFORM_SAMPLES_PER_CHUNK;
+
+        for (uint16_t chunk_index = 0; chunk_index < chunk_count; chunk_index++) {
+            if (!mqtt_manager_is_connected()) {
+                ESP_LOGW(TAG, "stopping waveform publish seq=%lu because MQTT disconnected",
+                         (unsigned long)waveform.sequence_id);
+                break;
+            }
+
+            const uint16_t first_sample = chunk_index * MQTT_WAVEFORM_SAMPLES_PER_CHUNK;
+            uint16_t samples_in_chunk = waveform.sample_count - first_sample;
+            if (samples_in_chunk > MQTT_WAVEFORM_SAMPLES_PER_CHUNK) {
+                samples_in_chunk = MQTT_WAVEFORM_SAMPLES_PER_CHUNK;
+            }
+
+            mqtt_waveform_chunk_t msg = {
+                .sequence_id = waveform.sequence_id,
+                .timestamp_ms = waveform.timestamp_ms,
+                .chunk_index = chunk_index,
+                .chunk_count = chunk_count,
+                .sample_rate_hz = waveform.sample_rate_hz,
+                .total_samples = waveform.sample_count,
+                .samples_in_chunk = samples_in_chunk,
+                .channels = waveform.channels,
+                .format = MQTT_WAVEFORM_FORMAT_I16_SCALED,
+            };
+
+            memcpy(msg.values,
+                   &waveform.values[first_sample * METROLOGY_WAVEFORM_CHANNELS],
+                   (size_t)samples_in_chunk * METROLOGY_WAVEFORM_CHANNELS * sizeof(int16_t));
+
+            const size_t payload_len = waveform_chunk_payload_len(samples_in_chunk);
+            const int msg_id = esp_mqtt_client_publish(s_client, topic, (const char *)&msg,
+                                                       (int)payload_len, 0, 0);
+            if (msg_id < 0) {
+                ESP_LOGW(TAG, "failed to publish waveform chunk %u/%u seq=%lu",
+                         (unsigned int)(chunk_index + 1U),
+                         (unsigned int)chunk_count,
+                         (unsigned long)waveform.sequence_id);
+                break;
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(1));
+        }
+
+        ESP_LOGI(TAG, "published waveform seq=%lu samples=%u chunks=%u",
+                 (unsigned long)waveform.sequence_id,
+                 (unsigned int)waveform.sample_count,
+                 (unsigned int)chunk_count);
     }
 }
 
@@ -221,6 +323,11 @@ esp_err_t mqtt_manager_init(void)
     }
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(s_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL));
     BaseType_t ok = xTaskCreate(mqtt_publish_task, "mqtt_pub", 6144, NULL, TASK_PRIORITY_MQTT, &s_publish_task_handle);
+    if (ok != pdPASS) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    ok = xTaskCreate(mqtt_waveform_publish_task, "mqtt_wave", 4096, NULL, TASK_PRIORITY_MQTT, &s_waveform_publish_task_handle);
     if (ok != pdPASS) {
         return ESP_ERR_NO_MEM;
     }
