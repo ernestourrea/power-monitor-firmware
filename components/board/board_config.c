@@ -14,6 +14,7 @@ static const board_config_t s_board = {
     .current_zc_gpio = BOARD_GPIO_ZC_CURRENT,
     .adc_unit = BOARD_ADC_UNIT,
     .adc_atten = BOARD_ADC_ATTEN,
+    .adc_bitwidth = BOARD_ADC_BIT_WIDTH,
     .voltage_adc_channel = BOARD_ADC_VOLTAGE_CHANNEL,
     .current_adc_channel = BOARD_ADC_CURRENT_CHANNEL,
 };

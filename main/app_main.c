@@ -12,6 +12,7 @@
 #include "relay_control.h"
 #include "config_store.h"
 #include "status_indicator.h"
+#include "metrology.h"
 
 static const char *TAG = "app_main";
 
@@ -33,11 +34,13 @@ void app_main(void)
     ESP_ERROR_CHECK(config_store_init());
     ESP_ERROR_CHECK(app_core_init());
     ESP_ERROR_CHECK(io_manager_init());
+    ESP_ERROR_CHECK(metrology_init());
     ESP_ERROR_CHECK(relay_control_init());
     ESP_ERROR_CHECK(status_indicator_init());
     ESP_ERROR_CHECK(connectivity_init());
     ESP_ERROR_CHECK(telemetry_init());
 
+    ESP_ERROR_CHECK(metrology_start());
     ESP_ERROR_CHECK(app_core_start());
     ESP_ERROR_CHECK(io_manager_start());
     ESP_ERROR_CHECK(relay_control_start());

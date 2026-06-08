@@ -5,6 +5,7 @@
 
 #include "driver/gpio.h"
 #include "hal/adc_types.h"
+#include "soc/soc_caps.h"
 
 /* Board pins configuration. */
 #define BOARD_GPIO_RELAY              GPIO_NUM_16
@@ -16,6 +17,7 @@
 
 #define BOARD_ADC_UNIT                ADC_UNIT_1
 #define BOARD_ADC_ATTEN               ADC_ATTEN_DB_12
+#define BOARD_ADC_BIT_WIDTH           SOC_ADC_DIGI_MAX_BITWIDTH
 #define BOARD_ADC_VOLTAGE_CHANNEL     ADC_CHANNEL_4
 #define BOARD_ADC_CURRENT_CHANNEL     ADC_CHANNEL_3
 

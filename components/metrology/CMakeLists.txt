@@ -1,0 +1,17 @@
+idf_component_register(
+    SRCS 
+        "adc_sampler.c" 
+        "metrology.c"
+        "calibration.c"
+        "power_calculator.c"
+    INCLUDE_DIRS 
+        "include"
+    REQUIRES 
+        common
+        board
+        storage
+        esp_timer
+        driver
+    PRIV_REQUIRES 
+        esp_adc
+)

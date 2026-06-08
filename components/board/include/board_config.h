@@ -17,6 +17,7 @@ typedef struct {
     gpio_num_t current_zc_gpio;
     adc_unit_t adc_unit;
     adc_atten_t adc_atten;
+    adc_bitwidth_t adc_bitwidth;
     adc_channel_t voltage_adc_channel;
     adc_channel_t current_adc_channel;
 } board_config_t;

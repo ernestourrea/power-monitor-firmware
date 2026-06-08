@@ -13,4 +13,5 @@ idf_component_register(
         relay_control
         storage
         status_indicator
+        metrology
 )
