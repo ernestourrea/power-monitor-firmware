@@ -15,6 +15,8 @@ esp_err_t command_handler_handle_app_event(const app_event_t event)
     }
     
     switch (event) {
+    case APP_EVT_NO_LOAD_DETECTED:
+        return relay_request_open(RELAY_REASON_NO_LOAD);
     case APP_EVT_COMMAND_RELAY_OPEN:
         return relay_request_open(RELAY_REASON_USER_COMMAND);
     case APP_EVT_COMMAND_RELAY_CLOSE:

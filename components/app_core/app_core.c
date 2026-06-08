@@ -95,6 +95,7 @@ static void app_core_handle_event(app_event_t event)
     case APP_EVT_FACTORY_RESET_REQUESTED:
         //set_state(DEVICE_FACTORY_RESET);
         break;
+    case APP_EVT_NO_LOAD_DETECTED:
     case APP_EVT_COMMAND_RELAY_OPEN:
     case APP_EVT_COMMAND_RELAY_CLOSE:
     case APP_EVT_COMMAND_RELAY_TOGGLE:

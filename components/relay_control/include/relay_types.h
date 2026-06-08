@@ -19,8 +19,9 @@ typedef enum {
 typedef enum {
     RELAY_REASON_BOOT,
     RELAY_REASON_USER_COMMAND, // MQTT Command
-    RELAY_REASON_MANUAL_COMMAND,
+    RELAY_REASON_MANUAL_COMMAND, // TODO: check, probably unused
     RELAY_REASON_FAULT,
+    RELAY_REASON_NO_LOAD,
     RELAY_REASON_PROTECTION,
     RELAY_REASON_DEFAULT_STATE
 } relay_request_reason_t;
