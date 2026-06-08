@@ -1,11 +1,7 @@
 #include "button_input.h"
 
 #include <stdint.h>
-//#include "app_core.h"
-//#include "app_log.h"
 #include "esp_log.h"
-#include "board_config.h"
-#include "common_types.h"
 #include "driver/gpio.h"
 #include "esp_intr_alloc.h"
 #include "esp_timer.h"
@@ -16,6 +12,9 @@
 // TODO: Try to remove these dependencies after app_event_t is implemented
 //#include "mqtt_manager.h"
 //#include "relay_control.h"
+#include "app_core.h"
+#include "board_config.h"
+#include "common_types.h"
 
 #define BUTTON_QUEUE_LEN 8
 #define BUTTON_DEBOUNCE_MS 50
@@ -106,23 +105,20 @@ static void button_task(void *arg)
             factory_reset_indicated = false;
 
             // TODO: Fix after app_event_t is implemented 
-            // app_event_t app_event = { 0 };
             if (duration_ms >= BUTTON_LONG_PRESS_MS) {
                 ESP_LOGW(TAG, "factory reset button request");
-                // app_event.id = APP_EVENT_BUTTON_FACTORY_RESET_REQUESTED;
+                app_core_post_event(APP_EVT_FACTORY_RESET_REQUESTED);
             } else if (duration_ms >= BUTTON_LONG_PRESS_MS / 2) {
                 ESP_LOGI(TAG, "provisioning button request");
-                // app_event.id = APP_EVENT_BUTTON_PROVISIONING_REQUESTED;
+                app_core_post_event(APP_EVT_REPROVISIONING_REQUESTED);
             } else {
                 ESP_LOGI(TAG, "toggle relay button request");
+                app_core_post_event(APP_EVT_COMMAND_RELAY_TOGGLE);
                 // TODO: Implement app event for relay toggle
                 // app_event.id = APP_EVENT_COMMAND_RELAY_TOGGLE;
                 // TODO: Move to app event manager after app_event_t is implemented
                 //(void)mqtt_manager_publish_relay_state(!relay_closed);
             }
-            
-            //(void)app_core_post_event(&app_event, pdMS_TO_TICKS(20));
-
             continue;
         }
 

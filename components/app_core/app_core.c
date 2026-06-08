@@ -19,6 +19,8 @@ static QueueHandle_t s_app_event_queue;
 
 static device_state_t s_state = DEVICE_BOOT;
 
+esp_err_t command_handler_handle_app_event(const app_event_t event);
+
 const char *device_state_name(device_state_t state)
 {
     switch (state) {
@@ -62,9 +64,11 @@ static void app_core_handle_event(app_event_t event)
         //set_state(DEVICE_MQTT_CONNECTING);
         break;
     case APP_EVT_WIFI_CONNECTED:
+        telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
         //set_state(DEVICE_MQTT_CONNECTING);
         break;
     case APP_EVT_WIFI_DISCONNECTED:
+        telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
         //fault_manager_raise(FAULT_WIFI_DISCONNECTED, FAULT_SEVERITY_WARNING);
         //set_state(DEVICE_OFFLINE);
         break;
@@ -85,6 +89,7 @@ static void app_core_handle_event(app_event_t event)
         //}
         break;
     case APP_EVT_REPROVISIONING_REQUESTED:
+        connectivity_post_event(CONN_EVT_REPROVISION_REQUESTED, 0);
         //set_state(DEVICE_UNPROVISIONED);
         break;
     case APP_EVT_FACTORY_RESET_REQUESTED:
@@ -92,8 +97,9 @@ static void app_core_handle_event(app_event_t event)
         break;
     case APP_EVT_COMMAND_RELAY_OPEN:
     case APP_EVT_COMMAND_RELAY_CLOSE:
+    case APP_EVT_COMMAND_RELAY_TOGGLE:
     case APP_EVT_COMMAND_CONFIG_UPDATE:
-        //(void)command_handler_handle_app_event(&event);
+        (void)command_handler_handle_app_event(event);
         break;
     default:
         ESP_LOGW(TAG, "Unhandled event: %d", event);

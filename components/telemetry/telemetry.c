@@ -6,6 +6,7 @@
 
 #include "mqtt_manager.h"
 #include "common_types.h"
+#include "app_core.h"
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -178,6 +179,18 @@ static void handle_mqtt_connect(void)
 static void telemetry_transition(telemetry_event_t event, int32_t reason)
 {
     (void)reason;
+
+    switch (event)
+    {
+    case TELEMETRY_EVT_MQTT_CONNECTED:
+        app_core_post_event(APP_EVT_MQTT_CONNECTED);
+        break;
+    case TELEMETRY_EVT_MQTT_DISCONNECTED:
+        app_core_post_event(APP_EVT_MQTT_DISCONNECTED);
+        break;
+    default:
+        break;
+    }
 
     switch (s_state) {
     case TELEMETRY_STATE_INIT:

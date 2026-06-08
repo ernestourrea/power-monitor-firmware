@@ -13,7 +13,8 @@
 #include "freertos/timers.h"
 
 // TODO: remove after adding functionality to app_core
-#include "telemetry.h"
+// #include "telemetry.h"
+#include "app_core.h"
 
 #define CONNECTIVITY_QUEUE_LEN 16
 
@@ -110,6 +111,18 @@ static void connectivity_transition(connectivity_event_t event, int32_t reason)
 {
     (void)reason;
 
+    switch (event)
+    {
+    case CONN_EVT_WIFI_CONNECTED:
+        app_core_post_event(APP_EVT_WIFI_CONNECTED);
+        break;
+    case CONN_EVT_WIFI_DISCONNECTED:
+        app_core_post_event(APP_EVT_WIFI_DISCONNECTED);
+        break;
+    default:
+        break;
+    }
+
     switch (s_state) {
     case CONN_STATE_INIT:
         switch (event) 
@@ -187,12 +200,12 @@ static void connectivity_transition(connectivity_event_t event, int32_t reason)
         {
             case CONN_EVT_WIFI_CONNECTED:
                 set_state(CONN_STATE_WIFI_CONNECTED);
-                telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
+                //telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
                 s_retry_count = 0;
                 break;
             case CONN_EVT_WIFI_DISCONNECTED:
                 start_backoff();
-                telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
+                //telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
                 break;
             case CONN_EVT_REPROVISION_REQUESTED:
                 set_state(CONN_STATE_REPROVISIONING);
@@ -210,7 +223,7 @@ static void connectivity_transition(connectivity_event_t event, int32_t reason)
             case CONN_EVT_WIFI_DISCONNECTED:
                 start_backoff();
                 s_retry_count = 0;
-                telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
+                //telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
                 break;
             case CONN_EVT_REPROVISION_REQUESTED:
                 set_state(CONN_STATE_REPROVISIONING);
@@ -238,11 +251,11 @@ static void connectivity_transition(connectivity_event_t event, int32_t reason)
                 break;
             case CONN_EVT_WIFI_DISCONNECTED:
                 start_backoff();
-                telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
+                //telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
                 break;
             case CONN_EVT_WIFI_CONNECTED:
                 set_state(CONN_STATE_WIFI_CONNECTED);
-                telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
+                //telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
                 s_retry_count = 0;
                 break;
             case CONN_EVT_REPROVISION_REQUESTED:
@@ -270,14 +283,14 @@ static void connectivity_transition(connectivity_event_t event, int32_t reason)
                 break;
             case CONN_EVT_WIFI_CONNECTED:
                 set_state(CONN_STATE_WIFI_CONNECTED);
-                telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
+                //telemetry_post_event(TELEMETRY_EVT_WIFI_CONNECTED, 0);
                 break;
             case CONN_EVT_PROVISIONING_STARTED:
             case CONN_EVT_WIFI_STARTED:
                 // Ignore these events if they happen during reprovisioning; we will start Wi-Fi again once reprovisioning is successful
                 break;
             case CONN_EVT_WIFI_DISCONNECTED:
-                telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
+                //telemetry_post_event(TELEMETRY_EVT_WIFI_DISCONNECTED, 0);
                 // Ignore these events if they happen during reprovisioning; we will start Wi-Fi again once reprovisioning is successful
                 break;
             case CONN_EVT_REPROVISION_REQUESTED:

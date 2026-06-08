@@ -1,10 +1,12 @@
 idf_component_register(
     SRCS 
         "app_core.c"
+        "command_handler.c"
     INCLUDE_DIRS 
         "include"
     REQUIRES
         common
         connectivity
         telemetry
+        relay_control
 )
