@@ -13,6 +13,7 @@ idf_component_register(
         storage
         esp_timer
         driver
+        relay_control
     PRIV_REQUIRES 
         esp_adc
 )

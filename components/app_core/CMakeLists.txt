@@ -10,4 +10,5 @@ idf_component_register(
         telemetry
         relay_control
         status_indicator
+        fault_manager
 )

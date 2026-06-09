@@ -17,6 +17,7 @@ bool mqtt_manager_is_connected(void);
 esp_err_t mqtt_manager_publish_alert_flags(uint32_t flags, uint32_t active_flags, uint8_t severity,
                                           uint64_t timestamp_ms, bool cleared);
 
+esp_err_t publish_relay_state(bool closed);
 // esp_err_t mqtt_manager_publish_state(void);
 // esp_err_t mqtt_manager_publish_relay_state(bool closed);
 

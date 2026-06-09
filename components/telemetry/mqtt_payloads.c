@@ -79,12 +79,12 @@ esp_err_t mqtt_payload_build_telemetry(const measurement_snapshot_t *s, char *ou
         "\"fp\":%.3f,\"thd\":%.3f,\"frequency\":%.3f}",
         (unsigned long long)(s->timestamp_ms / 1000ULL), 
         s->vrms, 
-        s->irms, 
-        s->active_power_w,
-        s->reactive_power_var, 
-        s->apparent_power_va, 
-        s->power_factor, 
-        s->current_thd_percent, 
+        s->relay_closed ? s->irms : 0.0f, 
+        s->relay_closed ? s->active_power_w : 0.0f,
+        s->relay_closed ? s->reactive_power_var : 0.0f, 
+        s->relay_closed ? s->apparent_power_va : 0.0f, 
+        s->relay_closed ? s->power_factor : 0.0f, 
+        s->relay_closed ? s->current_thd_percent : 0.0f, 
         s->frequency_hz
     );
 
@@ -259,19 +259,22 @@ esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_
     return err;
 }
 
-esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t len, app_event_t *out_event)
+/*
+esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_event_t *out_event)
 {
     if (!data || !out_event || len == 0)
     {
         return ESP_ERR_INVALID_ARG;
     }
 
+    ESP_LOGI(TAG, "OC config payload received: [%.*s]", (int)len, data);
+
     char *endptr = NULL;
     errno = 0;
-    unsigned long period_s = strtoul(data, &endptr, 10);
+    float overpower_limit_w = strtof(data, &endptr);
 
     // Ensure data was converted
-    if (errno != 0 || endptr == data || period_s > UINT32_MAX)
+    if (errno != 0 || endptr == data)
     {
         return ESP_ERR_INVALID_ARG;
     }
@@ -290,10 +293,88 @@ esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t le
     // Update stored and cached config
     smart_contact_config_t config;
     config_store_get_cached(&config);
-    config.report_interval_s = (uint32_t)period_s;
-    ESP_LOGI(TAG, "Report Interval: %lu s", period_s);
+    config.overpower_limit_w = overpower_limit_w;
+    ESP_LOGI(TAG, "Overpower Limit: %.4f W", overpower_limit_w);
 
     esp_err_t err = config_store_validate(&config) ? config_store_save(&config) : ESP_ERR_INVALID_ARG;
+
+    if (err == ESP_OK)
+    {
+        memset(out_event, 0, sizeof(*out_event));
+        *out_event = APP_EVT_COMMAND_CONFIG_UPDATE;
+    }
+
+    return err;
+}
+*/
+
+esp_err_t mqtt_payload_parse_telemetry_period_config(
+    const char *data,
+    size_t len,
+    app_event_t *out_event)
+{
+    if (!data || !out_event || len == 0)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    ESP_LOGI(TAG, "OC config payload received: [%.*s]", (int)len, data);
+
+    size_t i = 0;
+
+    while (i < len && isspace((unsigned char)data[i]))
+    {
+        i++;
+    }
+
+    if (i == len)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    uint32_t period_s = 0;
+    bool has_digit = false;
+
+    while (i < len && isdigit((unsigned char)data[i]))
+    {
+        has_digit = true;
+
+        uint32_t digit = (uint32_t)(data[i] - '0');
+
+        if (period_s > (UINT32_MAX - digit) / 10)
+        {
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        period_s = period_s * 10 + digit;
+        i++;
+    }
+
+    if (!has_digit)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    while (i < len && isspace((unsigned char)data[i]))
+    {
+        i++;
+    }
+
+    if (i != len)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    smart_contact_config_t config;
+    config_store_get_cached(&config);
+
+    config.report_interval_s = period_s;
+
+    ESP_LOGI(TAG, "Report Interval: %" PRIu32 " s", period_s);
+
+    esp_err_t err = config_store_validate(&config)
+                        ? config_store_save(&config)
+                        : ESP_ERR_INVALID_ARG;
 
     if (err == ESP_OK)
     {

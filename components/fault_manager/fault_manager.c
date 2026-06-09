@@ -16,7 +16,7 @@
 #define FAULT_EVENT_QUEUE_LEN 16
 
 #define FAULT_NO_LOAD_CURRENT_A              0.030f
-#define FAULT_CURRENT_RELAY_OPEN_CURRENT_A   0.100f
+#define FAULT_CURRENT_RELAY_OPEN_CURRENT_A   0.040f
 #define FAULT_HIGH_POWER_RATIO               0.90f
 #define FAULT_HIGH_POWER_CLEAR_RATIO         0.85f
 #define FAULT_HIGH_THD_PERCENT               20.0f
@@ -37,8 +37,8 @@ static uint8_t s_relay_open_current_count;
 
 static uint32_t critical_fault_mask(void)
 {
-    return FAULT_OVERCURRENT | FAULT_OVERVOLTAGE | FAULT_UNDERVOLTAGE |
-           FAULT_OVERPOWER | FAULT_CURRENT_WHEN_RELAY_OPEN | FAULT_RELAY_WELDED |
+    return FAULT_OVERCURRENT | //FAULT_OVERVOLTAGE | FAULT_UNDERVOLTAGE |
+           FAULT_OVERPOWER | FAULT_RELAY_WELDED | // FAULT_CURRENT_WHEN_RELAY_OPEN | 
            FAULT_RELAY_FAILED_TO_OPEN | FAULT_RELAY_FAILED_TO_CLOSE;
 }
 
@@ -203,15 +203,16 @@ static void update_high_power_state(float abs_power_w, float current_a,
     }
 
     if (s_high_power_active) {
-        *flags |= FAULT_HIGH_POWER;
+        //*flags |= FAULT_HIGH_POWER;
     }
 }
 
 static void update_no_load_state(const measurement_snapshot_t *snapshot,
                                  bool relay_closed,
+                                 bool should_open_relay,
                                  uint32_t *flags)
 {
-    const bool no_load_now = relay_closed &&
+    const bool no_load_now = should_open_relay && relay_closed &&
                              snapshot->vrms > FAULT_MIN_VALID_VOLTAGE &&
                              snapshot->irms <= FAULT_NO_LOAD_CURRENT_A;
 
@@ -241,7 +242,7 @@ static uint32_t build_fault_flags(const measurement_snapshot_t *snapshot,
     const float abs_power_w = fabsf(snapshot->active_power_w);
     const float abs_pf      = fabsf(snapshot->power_factor);
 
-    update_no_load_state(snapshot, relay_closed, &flags);
+    update_no_load_state(snapshot, relay_closed, config->auto_disconnect_no_load, &flags);
     update_high_power_state(abs_power_w, current_a,
                             config->overpower_limit_w,
                             config->overcurrent_limit_a,
@@ -252,6 +253,7 @@ static uint32_t build_fault_flags(const measurement_snapshot_t *snapshot,
     }
 
     if (config->overpower_limit_w > 0.0f && abs_power_w > config->overpower_limit_w) {
+        ESP_LOGI(TAG, "Power: %.4f, Limit: %.4f", abs_power_w, config->overpower_limit_w);
         flags |= FAULT_OVERPOWER;
     }
 
@@ -346,7 +348,7 @@ void fault_manager_task(void *arg)
         }
 
         if (cleared) {
-            (void)fault_manager_clear(cleared);
+            (void)fault_manager_clear(cleared & ~critical_fault_mask());
             ESP_LOGI(TAG, "fault cleared flags=0x%08lx", (unsigned long)cleared);
         }
     }

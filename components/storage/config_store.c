@@ -19,7 +19,7 @@ void config_store_defaults(smart_contact_config_t *config)
         .overcurrent_limit_a = 15.0f,
         .overpower_limit_w = 1800.0f,
         .overvoltage_limit_v = 135.0f,
-        .undervoltage_limit_v = 90.0f,
+        .undervoltage_limit_v = 105.0f,
         .frequency_min_hz = 57.0f,
         .frequency_max_hz = 63.0f,
         .voltage_gain = 0.1002891511f,
@@ -28,6 +28,7 @@ void config_store_defaults(smart_contact_config_t *config)
         .current_offset = 1850.50f,
         .relay_default_on = false,
         .auto_disconnect_on_fault = true,
+        .auto_disconnect_no_load = true,
         .config_version = 1,
     };
 }

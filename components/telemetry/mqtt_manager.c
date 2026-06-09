@@ -93,8 +93,6 @@ static bool topic_matches(mqtt_topic_kind_t kind, const char *topic, int topic_l
     return strlen(expected) == (size_t)topic_len && strncmp(expected, topic, topic_len) == 0;
 }
 
-
-
 esp_err_t mqtt_manager_publish_alert_flags(uint32_t flags, uint32_t active_flags, uint8_t severity,
                                       uint64_t timestamp_ms, bool cleared)
 {
@@ -148,6 +146,21 @@ static esp_err_t publish_latest_harmonics(void)
 
     const int msg_id = esp_mqtt_client_publish(s_client, topic, payload, 0, 1, 0);
     return msg_id >= 0 ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t publish_relay_state(bool closed)
+{
+    if (!s_connected || !s_client) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    char topic[MQTT_TOPIC_BUF_LEN];
+    esp_err_t err = mqtt_topics_build(s_device_id, MQTT_TOPIC_RELAY_STATE, topic, sizeof(topic));
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "failed to build relay state topic");
+        return err;
+    }
+    return esp_mqtt_client_publish(s_client, topic, closed ? "ON" : "OFF", 0, 1, 1) >= 0 ? ESP_OK : ESP_FAIL;
 }
 
 static void handle_data_event(const esp_mqtt_event_handle_t event)

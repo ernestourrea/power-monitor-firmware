@@ -23,6 +23,7 @@ typedef struct {
     float current_offset;
     bool relay_default_on;
     bool auto_disconnect_on_fault;
+    bool auto_disconnect_no_load;
     uint32_t config_version;
 } smart_contact_config_t;
 

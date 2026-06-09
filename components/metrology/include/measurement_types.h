@@ -25,7 +25,7 @@ typedef struct {
     float frequency_hz;
     harmonic_result_t current_harmonics;
     //double energy_wh;
-    //bool relay_closed; // TODO: check if needed
+    bool relay_closed; // TODO: check if needed
     //uint32_t fault_flags;
 } measurement_snapshot_t;
 

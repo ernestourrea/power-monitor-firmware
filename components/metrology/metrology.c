@@ -15,6 +15,7 @@
 #include "power_calculator.h"
 #include "config_store.h"
 #include "thd_calculator.h"
+#include "relay_control.h"
 //#include "zero_cross_monitor.h"
 
 #define SAMPLE_QUEUE_LEN 256
@@ -182,13 +183,13 @@ void metrology_task(void *arg)
                 .current_thd_percent = current_harmonics.thd_percent,
                 .frequency_hz = fundamental_hz,
                 //.energy_wh = energy.wh,
-                //.relay_closed = false,
+                .relay_closed = relay_is_closed(),
                 //.fault_flags = zc.fault_candidates,
             };
             snapshot.current_harmonics = current_harmonics;
 
-            //ESP_LOGI(TAG, "RMS Voltage: %.4f", power.vrms);
-            //ESP_LOGI(TAG, "RMS Current: %.4f", power.irms);            
+            // ESP_LOGI(TAG, "RMS Voltage: %.4f", power.vrms);
+            // ESP_LOGI(TAG, "RMS Current: %.4f", power.irms);            
            
             s_latest_snapshot = snapshot;
             if (xQueueSend(s_snapshot_queue, &snapshot, 0) != pdTRUE) {
