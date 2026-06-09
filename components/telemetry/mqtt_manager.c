@@ -76,6 +76,9 @@ static void subscribe_topics(void)
     if (mqtt_topics_build(s_device_id, MQTT_TOPIC_TS, topic, sizeof(topic)) == ESP_OK) {
         esp_mqtt_client_subscribe(s_client, topic, 1);
     }
+    if (mqtt_topics_build(s_device_id, MQTT_TOPIC_NO_LOAD_ACTION, topic, sizeof(topic)) == ESP_OK) {
+        esp_mqtt_client_subscribe(s_client, topic, 1);
+    }
     if (mqtt_topics_build(s_device_id, MQTT_TOPIC_WAVEFORM_REQUEST, topic, sizeof(topic)) == ESP_OK) {
         esp_mqtt_client_subscribe(s_client, topic, 1);
     }
@@ -197,6 +200,8 @@ static void handle_data_event(const esp_mqtt_event_handle_t event)
         update_telemetry_period();
     } else if (topic_matches(MQTT_TOPIC_POWER_LIM, event->topic, event->topic_len)) {
         err = mqtt_payload_parse_overpower_config(event->data, event->data_len, &app_event);
+    } else if (topic_matches(MQTT_TOPIC_NO_LOAD_ACTION, event->topic, event->topic_len)) {
+        err = mqtt_payload_parse_no_load_action_config(event->data, event->data_len, &app_event);
     }
     if (err == ESP_OK) {
         esp_err_t post_err = app_core_post_event(app_event);

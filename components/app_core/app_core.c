@@ -13,7 +13,9 @@
 #include "common_types.h"
 #include "connectivity.h"
 #include "telemetry.h"
+#include "mqtt_manager.h"
 #include "status_indicator.h"
+#include "relay_control.h"
 
 #define APP_EVENT_QUEUE_LEN 24
 
@@ -81,6 +83,7 @@ static void app_core_handle_message(const app_msg_t *msg)
         break;
     case APP_EVT_MQTT_CONNECTED:
         status_indicator_set_mqtt_connected(true);
+        publish_relay_state(relay_is_closed());
         //set_state(DEVICE_ONLINE);
         break;
     case APP_EVT_MQTT_DISCONNECTED:

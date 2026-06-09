@@ -259,33 +259,9 @@ esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_
     return err;
 }
 
-/*
-esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_event_t *out_event)
+esp_err_t mqtt_payload_parse_no_load_action_config(const char *data, size_t len, app_event_t *out_event)
 {
-    if (!data || !out_event || len == 0)
-    {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    ESP_LOGI(TAG, "OC config payload received: [%.*s]", (int)len, data);
-
-    char *endptr = NULL;
-    errno = 0;
-    float overpower_limit_w = strtof(data, &endptr);
-
-    // Ensure data was converted
-    if (errno != 0 || endptr == data)
-    {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    // Check for trailing, non-space characters
-    while (endptr < data + len && isspace((unsigned char)*endptr))
-    {
-        ++endptr;
-    }
-
-    if (endptr != data + len)
+        if (!data || !out_event || len == 0)
     {
         return ESP_ERR_INVALID_ARG;
     }
@@ -293,8 +269,18 @@ esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_
     // Update stored and cached config
     smart_contact_config_t config;
     config_store_get_cached(&config);
-    config.overpower_limit_w = overpower_limit_w;
-    ESP_LOGI(TAG, "Overpower Limit: %.4f W", overpower_limit_w);
+    
+    if (len == 4 && strncmp(data, "KEEP", len) == 0)
+    {
+        ESP_LOGI(TAG, "AUTO DISCONNECT ON LOAD = FALSE");
+        config.auto_disconnect_no_load = false;
+    }
+
+    if (len == 3 && strncmp(data, "OFF", len) == 0)
+    {
+        ESP_LOGI(TAG, "AUTO DISCONNECT ON LOAD = TRUE");
+        config.auto_disconnect_no_load = true;
+    }
 
     esp_err_t err = config_store_validate(&config) ? config_store_save(&config) : ESP_ERR_INVALID_ARG;
 
@@ -306,7 +292,6 @@ esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_
 
     return err;
 }
-*/
 
 esp_err_t mqtt_payload_parse_telemetry_period_config(
     const char *data,

@@ -19,5 +19,6 @@ esp_err_t mqtt_payload_build_fault_flags(uint32_t flags, char *out, size_t out_l
 esp_err_t mqtt_payload_parse_command(const char *data, size_t len, app_event_t *out_event);
 esp_err_t mqtt_payload_parse_overpower_config(const char *data, size_t len, app_event_t *out_event);
 esp_err_t mqtt_payload_parse_telemetry_period_config(const char *data, size_t len, app_event_t *out_event);
+esp_err_t mqtt_payload_parse_no_load_action_config(const char *data, size_t len, app_event_t *out_event);
 
 #endif // MQTT_PAYLOADS_H

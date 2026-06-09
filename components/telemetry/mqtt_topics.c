@@ -19,6 +19,7 @@ esp_err_t mqtt_topics_build(const char *device_id, mqtt_topic_kind_t kind, char 
         case MQTT_TOPIC_COMMANDS: suffix = "control/rele"; break;
         case MQTT_TOPIC_POWER_LIM: suffix = "control/limite_potencia"; break;
         case MQTT_TOPIC_TS: suffix = "control/tiempo_muestreo"; break;
+        case MQTT_TOPIC_NO_LOAD_ACTION: suffix = "control/no_load_action"; break;
         case MQTT_TOPIC_WAVEFORM_REQUEST: suffix = "control/waveform/request"; break;
         case MQTT_TOPIC_HARMONICS_REQUEST: suffix = "control/armonicos/request"; break;
         // Publishes

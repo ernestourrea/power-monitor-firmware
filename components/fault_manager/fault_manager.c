@@ -25,7 +25,7 @@
 #define FAULT_MIN_CURRENT_FOR_QUALITY_A       0.100f
 #define FAULT_MIN_APPARENT_POWER_FOR_PF_VA    5.0f
 #define FAULT_RELAY_OPEN_CONSECUTIVE_SAMPLES  3U
-#define FAULT_NO_LOAD_CONSECUTIVE_SAMPLES     2U
+#define FAULT_NO_LOAD_CONSECUTIVE_SAMPLES     4U
 
 static const char *TAG = "fault";
 static QueueHandle_t s_fault_queue;
@@ -347,9 +347,9 @@ void fault_manager_task(void *arg)
             ESP_LOGW(TAG, "fault raised flags=0x%08lx", (unsigned long)raised);
         }
 
-        if (cleared) {
+        if (cleared & ~critical_fault_mask()) {
             (void)fault_manager_clear(cleared & ~critical_fault_mask());
-            ESP_LOGI(TAG, "fault cleared flags=0x%08lx", (unsigned long)cleared);
+            ESP_LOGI(TAG, "fault cleared flags=0x%08lx", (unsigned long)(cleared & ~critical_fault_mask()));
         }
     }
 }
