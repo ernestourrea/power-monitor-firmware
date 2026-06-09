@@ -14,6 +14,8 @@ esp_err_t mqtt_manager_stop_client(void);
 
 bool mqtt_manager_is_client_started(void);
 bool mqtt_manager_is_connected(void);
+esp_err_t mqtt_manager_publish_alert_flags(uint32_t flags, uint32_t active_flags, uint8_t severity,
+                                          uint64_t timestamp_ms, bool cleared);
 
 // esp_err_t mqtt_manager_publish_state(void);
 // esp_err_t mqtt_manager_publish_relay_state(bool closed);

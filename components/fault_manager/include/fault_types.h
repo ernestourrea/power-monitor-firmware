@@ -4,6 +4,7 @@
 #define FAULT_TYPES_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum {
     FAULT_SEVERITY_INFO,
@@ -20,7 +21,8 @@ typedef enum {
     FAULT_HIGH_THD = (1UL << 5),
     FAULT_POWER_FACTOR_TOO_LOW = (1UL << 6),
     FAULT_NO_VOLTAGE = (1UL << 7),
-    FAULT_NO_CURRENT_WHEN_EXPECTED = (1UL << 8),
+    FAULT_NO_LOAD = (1UL << 8),
+    FAULT_NO_CURRENT_WHEN_EXPECTED = FAULT_NO_LOAD,
     FAULT_CURRENT_WHEN_RELAY_OPEN = (1UL << 9),
     FAULT_ADC_SATURATION = (1UL << 10),
     FAULT_ADC_DISCONNECTED = (1UL << 11),
@@ -29,7 +31,8 @@ typedef enum {
     FAULT_RELAY_WELDED = (1UL << 14),
     FAULT_RELAY_FAILED_TO_CLOSE = (1UL << 15),
     FAULT_RELAY_FAILED_TO_OPEN = (1UL << 16),
-    //FAULT_TEMPERATURE_HIGH = (1UL << 17),
+    FAULT_HIGH_POWER = (1UL << 17),
+    //FAULT_TEMPERATURE_HIGH = (1UL << 18),
     //FAULT_FLASH_ERROR = (1UL << 18),
     //FAULT_WIFI_DISCONNECTED = (1UL << 19),
     //FAULT_MQTT_DISCONNECTED = (1UL << 20),
@@ -38,8 +41,10 @@ typedef enum {
 
 typedef struct {
     uint32_t flags;
+    uint32_t active_flags;
     fault_severity_t severity;
     uint64_t timestamp_ms;
+    bool cleared;
 } fault_event_t;
 
 #endif // FAULT_TYPES_H

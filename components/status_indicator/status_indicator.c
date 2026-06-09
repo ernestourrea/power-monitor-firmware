@@ -25,6 +25,7 @@ static volatile bool s_wifi_connected;
 static volatile bool s_mqtt_connected;
 static volatile status_indicator_request_t s_pending_request;
 static volatile bool s_request_pending;
+static volatile bool s_fault_active;
 
 static relay_state_t s_last_relay_state = RELAY_OPEN;
 static relay_request_reason_t s_last_open_reason = RELAY_REASON_BOOT;
@@ -134,6 +135,18 @@ static void compute_base_color(TickType_t now_tick, uint8_t *red, uint8_t *green
             }
         }
         break;
+    }
+    
+    if(s_fault_active){
+        if ((now_ms % FAULT_BLINK_PERIOD_MS) < (FAULT_BLINK_PERIOD_MS / 2U)) {
+            *red = BASE_BRIGHTNESS;
+            *green = 0;
+            *blue = 0;
+        } else {
+            *red = 0;
+            *green = 0;
+            *blue = 0;
+        }
     }
 }
 
@@ -257,6 +270,12 @@ esp_err_t status_indicator_set_wifi_connected(bool connected)
 esp_err_t status_indicator_set_mqtt_connected(bool connected)
 {
     s_mqtt_connected = connected;
+    return ESP_OK;
+}
+
+esp_err_t status_indicator_set_fault_active(bool fault_active)
+{
+    s_fault_active = fault_active;
     return ESP_OK;
 }
 

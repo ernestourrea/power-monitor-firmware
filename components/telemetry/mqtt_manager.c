@@ -94,6 +94,33 @@ static bool topic_matches(mqtt_topic_kind_t kind, const char *topic, int topic_l
 }
 
 
+
+esp_err_t mqtt_manager_publish_alert_flags(uint32_t flags, uint32_t active_flags, uint8_t severity,
+                                      uint64_t timestamp_ms, bool cleared)
+{
+    if (!mqtt_manager_is_connected()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    char topic[MQTT_TOPIC_BUF_LEN];
+    char payload[128];
+
+    esp_err_t err = mqtt_payload_build_alert_flags(flags, active_flags, severity,
+                                                   timestamp_ms, cleared,
+                                                   payload, sizeof(payload));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = mqtt_topics_build(s_device_id, MQTT_TOPIC_FAULTS, topic, sizeof(topic));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    const int msg_id = esp_mqtt_client_publish(s_client, topic, payload, 0, 1, 0);
+    return msg_id >= 0 ? ESP_OK : ESP_FAIL;
+}
+
 static esp_err_t publish_latest_harmonics(void)
 {
     if (!mqtt_manager_is_connected()) {
@@ -180,7 +207,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_CONNECTED:
         s_connected = true;
         subscribe_topics();
-        //(void)publish_fault_flags(fault_manager_get_active_flags());
         telemetry_post_event(TELEMETRY_EVT_MQTT_CONNECTED, 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -292,8 +318,6 @@ static void mqtt_publish_task(void *arg)
     (void)arg;
     char topic[MQTT_TOPIC_BUF_LEN];
     char payload[MQTT_PAYLOAD_BUF_LEN];
-    uint32_t last_published_fault_flags = UINT32_MAX;
-
     while (1) {
 
         if (!mqtt_manager_is_connected()) {
@@ -313,21 +337,6 @@ static void mqtt_publish_task(void *arg)
             }*/
         }
 
-        /*
-        fault_event_t fault;
-        bool fault_event_received = false;
-        while (fault_manager_get_event_queue() &&
-               xQueueReceive(fault_manager_get_event_queue(), &fault, 0) == pdTRUE) {
-            fault_event_received = true;
-        }
-
-        uint32_t active_fault_flags = fault_manager_get_active_flags();
-        if (fault_event_received || active_fault_flags != last_published_fault_flags) {
-            if (publish_fault_flags(active_fault_flags) == ESP_OK) {
-                last_published_fault_flags = active_fault_flags;
-            }
-        }
-        */
 
         vTaskDelay(pdMS_TO_TICKS(s_telemetry_delay_ms));
     }

@@ -134,8 +134,8 @@ void metrology_task(void *arg)
 
         if (waveform_capturing && waveform_count < METROLOGY_WAVEFORM_SAMPLE_COUNT) {
             // Stores in centivolts and miliamperes to send data as integers and not floats
-            waveform_capture.values[(waveform_count * 2U) + 0U] = (int16_t)(voltage * 1.0f);
-            waveform_capture.values[(waveform_count * 2U) + 1U] = (int16_t)(current * 1.0f);
+            waveform_capture.values[(waveform_count * 2U) + 0U] = (int16_t)(voltage * 100.0f);
+            waveform_capture.values[(waveform_count * 2U) + 1U] = (int16_t)(current * 1000.0f);
             waveform_count++;
 
             if (waveform_count >= METROLOGY_WAVEFORM_SAMPLE_COUNT) {
@@ -187,10 +187,8 @@ void metrology_task(void *arg)
             };
             snapshot.current_harmonics = current_harmonics;
 
-            /*
-            ESP_LOGI(TAG, "RMS Voltage: %.4f", power.vrms);
-            ESP_LOGI(TAG, "RMS Current: %.4f", power.irms);
-            */
+            //ESP_LOGI(TAG, "RMS Voltage: %.4f", power.vrms);
+            //ESP_LOGI(TAG, "RMS Current: %.4f", power.irms);            
            
             s_latest_snapshot = snapshot;
             if (xQueueSend(s_snapshot_queue, &snapshot, 0) != pdTRUE) {

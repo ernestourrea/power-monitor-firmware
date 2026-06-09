@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include "esp_log.h"
 
 #include "app_core.h" // TODO: maybe return to app_events (?)
@@ -87,6 +88,36 @@ esp_err_t mqtt_payload_build_telemetry(const measurement_snapshot_t *s, char *ou
         s->frequency_hz
     );
 
+    return (n > 0 && (size_t)n < out_len) ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
+
+esp_err_t mqtt_payload_build_alert_flags(uint32_t flags, uint32_t active_flags, uint8_t severity,
+                                      uint64_t timestamp_ms, bool cleared,
+                                      char *out, size_t out_len)
+{
+    if (!out || out_len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    const int n = snprintf(out, out_len,
+        "{\"timestamp\":%llu,\"flags\":%lu,\"active\":%lu,\"severity\":%u,\"cleared\":%s}",
+        (unsigned long long)(timestamp_ms / 1000ULL),
+        (unsigned long)flags,
+        (unsigned long)active_flags,
+        (unsigned int)severity,
+        cleared ? "true" : "false");
+
+    return (n > 0 && (size_t)n < out_len) ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
+esp_err_t mqtt_payload_build_fault_flags(uint32_t flags, char *out, size_t out_len)
+{
+    if (!out || out_len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    const int n = snprintf(out, out_len, "{\"active\":%lu}", (unsigned long)flags);
     return (n > 0 && (size_t)n < out_len) ? ESP_OK : ESP_ERR_NO_MEM;
 }
 

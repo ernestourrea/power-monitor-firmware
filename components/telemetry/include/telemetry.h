@@ -4,6 +4,7 @@
 #define TELEMETRY_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "esp_err.h"
 
 typedef enum {
@@ -35,6 +36,8 @@ esp_err_t telemetry_start(void);
 esp_err_t telemetry_stop(void);
 
 esp_err_t telemetry_post_event(telemetry_event_t event, int32_t reason);
+esp_err_t telemetry_publish_alert_flags(uint32_t flags, uint32_t active_flags, uint8_t severity,
+                                        uint64_t timestamp_ms, bool cleared);
 
 // TODO: check for circular dependencies and possibly remove these functions
 esp_err_t telemetry_notify_wifi_connected(void);

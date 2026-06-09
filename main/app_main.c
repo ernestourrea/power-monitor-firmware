@@ -13,6 +13,7 @@
 #include "config_store.h"
 #include "status_indicator.h"
 #include "metrology.h"
+#include "fault_manager.h"
 
 static const char *TAG = "app_main";
 
@@ -36,8 +37,8 @@ void app_main(void)
     // Calibration parameters
     smart_contact_config_t config;
     ESP_ERROR_CHECK(config_store_get_cached(&config));
-    config.voltage_gain = 1.0f;
-    config.current_gain = 1.0f;
+    config.voltage_gain = 0.1002891511f;
+    config.current_gain = 0.01f*0.26;
     config.voltage_offset = 1849.00f;
     config.current_offset = 1849.00f;
     ESP_ERROR_CHECK(config_store_save(&config));
@@ -46,6 +47,7 @@ void app_main(void)
     ESP_ERROR_CHECK(io_manager_init());
     ESP_ERROR_CHECK(metrology_init());
     ESP_ERROR_CHECK(relay_control_init());
+    ESP_ERROR_CHECK(fault_manager_init());
     ESP_ERROR_CHECK(status_indicator_init());
     ESP_ERROR_CHECK(connectivity_init());
     ESP_ERROR_CHECK(telemetry_init());
@@ -54,6 +56,7 @@ void app_main(void)
     ESP_ERROR_CHECK(app_core_start());
     ESP_ERROR_CHECK(io_manager_start());
     ESP_ERROR_CHECK(relay_control_start());
+    ESP_ERROR_CHECK(fault_manager_start());
     ESP_ERROR_CHECK(status_indicator_start());
     ESP_ERROR_CHECK(connectivity_start());
     ESP_ERROR_CHECK(telemetry_start());

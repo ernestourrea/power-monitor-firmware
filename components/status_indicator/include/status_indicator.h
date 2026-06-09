@@ -9,7 +9,7 @@
 #define STATUS_LED_COUNT 1
 #define STATUS_TICK_MS 50
 
-#define BASE_BRIGHTNESS 6U
+#define BASE_BRIGHTNESS 255U
 #define HIGH_POWER_MIN_BRIGHTNESS 2U
 #define HIGH_POWER_MAX_BRIGHTNESS 12U
 
@@ -44,6 +44,8 @@ esp_err_t status_indicator_start(void);
 /* Connectivity/telemetry overlays. These are intentionally commanded by app_core. */
 esp_err_t status_indicator_set_wifi_connected(bool connected);
 esp_err_t status_indicator_set_mqtt_connected(bool connected);
+
+esp_err_t status_indicator_set_fault_active(bool fault_active);
 
 /* One-shot request indications. */
 esp_err_t status_indicator_play_request(status_indicator_request_t request);

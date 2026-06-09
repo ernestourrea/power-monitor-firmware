@@ -3,6 +3,8 @@
 #ifndef APP_CORE_H
 #define APP_CORE_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -49,20 +51,25 @@ typedef enum {
 } app_event_t;
 
 typedef struct {
+    uint32_t flags;
+    uint32_t active_flags;
+    uint8_t severity;
+    uint64_t timestamp_ms;
+    bool cleared;
+} app_fault_alert_t;
+
+typedef struct {
     app_event_t event;
-    /* TODO
     union {
-        measurement_snapshot_t measurement;
-        uint32_t fault_flags;
-        char command_id[48];
+        app_fault_alert_t fault_alert;
     } data;
-    */
 } app_msg_t;
 
 esp_err_t app_core_init(void);
 esp_err_t app_core_start(void);
 
 esp_err_t app_core_post_event(app_event_t event);
+esp_err_t app_core_post_fault_alert_event(app_event_t event, const app_fault_alert_t *alert);
 
 device_state_t app_core_get_state(void);
 const char *device_state_name(device_state_t state);

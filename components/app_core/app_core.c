@@ -2,6 +2,8 @@
 
 #include "app_core.h"
 
+#include <stddef.h>
+
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -56,8 +58,9 @@ static void app_core_transition(app_event_t event)
     (void)event;
 }
 
-static void app_core_handle_event(app_event_t event)
+static void app_core_handle_message(const app_msg_t *msg)
 {
+    const app_event_t event = msg->event;
     ESP_LOGW(TAG, "received event %d", event);
     switch (event) 
     {
@@ -86,14 +89,23 @@ static void app_core_handle_event(app_event_t event)
         //set_state(DEVICE_OFFLINE);
         break;
     case APP_EVT_FAULT_RAISED:
-        //fault_manager_raise(FAULT_FAULT_RAISED, FAULT_SEVERITY_WARNING);
-        //set_state(DEVICE_FAULT);
+        set_state(DEVICE_FAULT_ACTIVE);
+        (void)telemetry_publish_alert_flags(msg->data.fault_alert.flags,
+                                            msg->data.fault_alert.active_flags,
+                                            msg->data.fault_alert.severity,
+                                            msg->data.fault_alert.timestamp_ms,
+                                            msg->data.fault_alert.cleared);
         (void)command_handler_handle_app_event(event);
         break;
     case APP_EVT_FAULT_CLEARED:
-        //if (s_state == DEVICE_FAULT) {
-        //    set_state(DEVICE_OFFLINE);
-        //}
+        if (msg->data.fault_alert.active_flags == 0U) {
+            set_state(DEVICE_NORMAL_OPERATION);
+        }
+        (void)telemetry_publish_alert_flags(msg->data.fault_alert.flags,
+                                            msg->data.fault_alert.active_flags,
+                                            msg->data.fault_alert.severity,
+                                            msg->data.fault_alert.timestamp_ms,
+                                            msg->data.fault_alert.cleared);
         (void)command_handler_handle_app_event(event);
         break;
     case APP_EVT_REPROVISIONING_INDICATE_REQUESTED:
@@ -134,7 +146,7 @@ static void app_core_task(void *arg)
 
     while (true) {
         if (xQueueReceive(s_app_event_queue, &msg, portMAX_DELAY) == pdTRUE) {
-            app_core_handle_event(msg.event);
+            app_core_handle_message(&msg);
             app_core_transition(msg.event);
         }
     }
@@ -165,18 +177,37 @@ esp_err_t app_core_start(void)
     return ok == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
 }
 
-esp_err_t app_core_post_event(app_event_t event)
+static esp_err_t post_app_msg(const app_msg_t *msg)
 {
     if (!s_app_event_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
+    BaseType_t ok = xQueueSend(s_app_event_queue, msg, 0);
+    return ok == pdTRUE ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t app_core_post_event(app_event_t event)
+{
     app_msg_t msg = {
         .event = event
     };
 
-    BaseType_t ok = xQueueSend(s_app_event_queue, &msg, 0);
-    return ok == pdTRUE ? ESP_OK : ESP_FAIL;
+    return post_app_msg(&msg);
+}
+
+esp_err_t app_core_post_fault_alert_event(app_event_t event, const app_fault_alert_t *alert)
+{
+    if (!alert || (event != APP_EVT_FAULT_RAISED && event != APP_EVT_FAULT_CLEARED)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    app_msg_t msg = {
+        .event = event,
+        .data.fault_alert = *alert
+    };
+
+    return post_app_msg(&msg);
 }
 
 device_state_t app_core_get_state(void)

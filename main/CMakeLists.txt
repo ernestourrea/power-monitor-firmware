@@ -14,4 +14,5 @@ idf_component_register(
         storage
         status_indicator
         metrology
+        fault_manager
 )

@@ -3,6 +3,7 @@
 #include "telemetry.h"
 
 #include <stdint.h>
+#include <stddef.h>
 
 #include "mqtt_manager.h"
 #include "common_types.h"
@@ -31,8 +32,31 @@ static telemetry_state_t s_state = TELEMETRY_STATE_INIT;
 static uint32_t s_retry_count;
 static bool s_wifi_connected;
 static bool s_started;
+static bool s_pending_alert;
+static uint32_t s_pending_alert_flags;
+static uint32_t s_pending_alert_active_flags;
+static uint8_t s_pending_alert_severity;
+static uint64_t s_pending_alert_timestamp_ms;
+static bool s_pending_alert_cleared;
 
 static void telemetry_transition(telemetry_event_t event, int32_t reason);
+
+static void flush_pending_alert(void)
+{
+    if (!s_pending_alert || !mqtt_manager_is_connected()) {
+        return;
+    }
+
+    esp_err_t err = mqtt_manager_publish_alert_flags(s_pending_alert_flags,
+                                                     s_pending_alert_active_flags,
+                                                     s_pending_alert_severity,
+                                                     s_pending_alert_timestamp_ms,
+                                                     s_pending_alert_cleared);
+    if (err == ESP_OK) {
+        s_pending_alert = false;
+    }
+}
+
 
 const char *telemetry_state_name(telemetry_state_t state)
 {
@@ -184,6 +208,7 @@ static void telemetry_transition(telemetry_event_t event, int32_t reason)
     {
     case TELEMETRY_EVT_MQTT_CONNECTED:
         app_core_post_event(APP_EVT_MQTT_CONNECTED);
+        flush_pending_alert();
         break;
     case TELEMETRY_EVT_MQTT_DISCONNECTED:
         app_core_post_event(APP_EVT_MQTT_DISCONNECTED);
@@ -479,6 +504,24 @@ esp_err_t telemetry_post_event(telemetry_event_t event, int32_t reason)
 
     BaseType_t ok = xQueueSend(s_queue, &msg, 0) ;
     return ok == pdTRUE ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t telemetry_publish_alert_flags(uint32_t flags, uint32_t active_flags, uint8_t severity,
+                                        uint64_t timestamp_ms, bool cleared)
+{
+    esp_err_t err = mqtt_manager_publish_alert_flags(flags, active_flags, severity, timestamp_ms, cleared);
+    if (err == ESP_OK) {
+        s_pending_alert = false;
+        return ESP_OK;
+    }
+
+    s_pending_alert = true;
+    s_pending_alert_flags = flags;
+    s_pending_alert_active_flags = active_flags;
+    s_pending_alert_severity = severity;
+    s_pending_alert_timestamp_ms = timestamp_ms;
+    s_pending_alert_cleared = cleared;
+    return err;
 }
 
 telemetry_state_t telemetry_get_state(void)
