@@ -4,6 +4,7 @@ idf_component_register(
         "ble_prov_security.c"
         "wifi_manager.c"
         "connectivity.c"
+        "time_sync.c"
     INCLUDE_DIRS 
         "include"
     REQUIRES 

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include "esp_err.h"
 
-#define CONFIG_SMART_CONTACT_MQTT_REPORT_INTERVAL_S 5
+#define CONFIG_SMART_CONTACT_MQTT_REPORT_INTERVAL_S 1
 
 typedef struct {
     uint32_t report_interval_s;

@@ -14,6 +14,7 @@
 #include "status_indicator.h"
 #include "metrology.h"
 #include "fault_manager.h"
+#include "time_sync.h"
 
 static const char *TAG = "app_main";
 
@@ -35,6 +36,7 @@ void app_main(void)
     ESP_ERROR_CHECK(config_store_init());
 
     // Calibration parameters
+    /*
     smart_contact_config_t config;
     ESP_ERROR_CHECK(config_store_get_cached(&config));
     config.voltage_gain = 0.1002891511f;
@@ -42,6 +44,7 @@ void app_main(void)
     config.voltage_offset = 1849.00f;
     config.current_offset = 1849.00f;
     ESP_ERROR_CHECK(config_store_save(&config));
+    */
 
     ESP_ERROR_CHECK(app_core_init());
     ESP_ERROR_CHECK(io_manager_init());
@@ -51,6 +54,7 @@ void app_main(void)
     ESP_ERROR_CHECK(status_indicator_init());
     ESP_ERROR_CHECK(connectivity_init());
     ESP_ERROR_CHECK(telemetry_init());
+    ESP_ERROR_CHECK(time_sync_init());
 
     ESP_ERROR_CHECK(metrology_start());
     ESP_ERROR_CHECK(app_core_start());
@@ -60,6 +64,7 @@ void app_main(void)
     ESP_ERROR_CHECK(status_indicator_start());
     ESP_ERROR_CHECK(connectivity_start());
     ESP_ERROR_CHECK(telemetry_start());
+    ESP_ERROR_CHECK(time_sync_start());
 
     ESP_LOGI(TAG, "smart contact firmware started");
 }
