@@ -18,7 +18,7 @@ void config_store_defaults(smart_contact_config_t *config)
         .report_interval_s = CONFIG_SMART_CONTACT_MQTT_REPORT_INTERVAL_S,
         .overcurrent_limit_a = 15.0f,
         .overpower_limit_w = 1800.0f,
-        .overvoltage_limit_v = 140.0f,
+        .overvoltage_limit_v = 135.0f,
         .undervoltage_limit_v = 105.0f,
         .frequency_min_hz = 57.0f,
         .frequency_max_hz = 63.0f,

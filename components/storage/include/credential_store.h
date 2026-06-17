@@ -7,7 +7,7 @@
 
 // TODO: move to config file (sdkconfig)
 
-#define CONFIG_SMART_CONTACT_MQTT_BROKER_URI "mqtt://192.168.68.104:1883"
+#define CONFIG_SMART_CONTACT_MQTT_BROKER_URI "mqtt://NNN.NNN.NNN.NNN:1883"
 #define CONFIG_SMART_CONTACT_DEVICE_ID       "contacto_01"
 
 #define MQTT_URI_MAX_LEN 128
